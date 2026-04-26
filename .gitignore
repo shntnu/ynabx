@@ -1,0 +1,17 @@
+# Local DuckDB cache + exports (personal data)
+data/
+
+# direnv: holds personal 1P vault path. Use .envrc.example as a template.
+.envrc
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+
+# Per-machine Claude Code permission accumulation
+.claude/settings.local.json
+
+# OS
+.DS_Store
