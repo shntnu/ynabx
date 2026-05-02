@@ -1,9 +1,24 @@
-# ynab-marimo
+# ynabx - YNAB eXplore
 
-A small catalog of [marimo](https://marimo.io) notebooks over the
-[YNAB API](https://api.ynab.com/). Each notebook exposes reusable
-`@app.function` helpers; later notebooks import from earlier ones. Use
-them as a UI to your own budget, or compose them into one-off analyses.
+An experiment in agent-driven personal-data exploration, built around
+[YNAB](https://www.youneedabudget.com/) and its
+[REST API](https://api.ynab.com/).
+
+## The hypothesis
+
+Same shape as [jx](https://github.com/broadinstitute/jx) and
+[fgx](https://github.com/broadinstitute/fgx) - a catalog of marimo
+notebooks plus thin operational skills - applied to personal-finance
+data instead of scientific data. Like fgx, ynabx hits a REST API rather
+than local files; unlike fgx, it delta-syncs into a local DuckDB so
+analysis runs against the cache and only sync/writes touch the network.
+
+Each notebook exposes `@app.function` helpers; later notebooks import
+from earlier ones. A thin `compose-ynab-notebook` skill tells an agent
+(Claude Code) what's in the catalog and how to compose new analyses
+from it - "what did I spend on camps last year", "categorize the recent
+uncategorized stuff", "export Q1 to parquet" - rather than reinventing
+the SQL each time.
 
 ## What's in here
 

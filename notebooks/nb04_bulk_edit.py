@@ -149,8 +149,7 @@ def _(plan):
     # The naive payee-suggestion misses cases like a Mac Mini purchase showing as
     # Apple's recurring iCloud category. Set overrides here. Empty dict = no overrides.
     overrides: dict[str, str] = {
-        # Example (already applied to YNAB, kept here as a record):
-        # "237f7034-e114-443f-a77c-46d7caaedb8e": "03da6148-4dd7-ac1b-e52c-fd2603087617",  # Apr 20 Apple $1592.69 -> Household Goods
+        # "<txn-id>": "<category-id>",  # short note about why
     }
 
     if overrides:
