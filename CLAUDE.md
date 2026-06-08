@@ -19,7 +19,9 @@ transfer exclusion, deleted tombstones). It triggers on phrasings like
 
 Quick pointer: `nb01` (auth + HTTP), `nb02` (DuckDB cache + delta sync),
 `nb03` (review with payee-history suggestions), `nb04` (bulk edit,
-dry-run by default), `nb05` (parquet/csv exports + summaries).
+dry-run by default), `nb05` (parquet/csv exports + summaries),
+`nb06` (reconcile a bank statement CSV against an account - amount-pooled
+matching, read-only diff).
 
 ## Auth
 
@@ -84,8 +86,20 @@ Idempotent and cheap when there are no changes.
 - **Amounts are in milliunits** (x1000). Always `amount_milli / 1000.0`
   for dollars.
 - **Splits**: parent transactions have `has_splits=TRUE`; subtransactions
-  are separate rows with `parent_id` set. Sum over
-  `parent_id IS NULL OR has_splits=FALSE` to avoid double-counting.
+  are separate rows with `parent_id` set. The right filter depends on the
+  question:
+  - **Account balance / statement matching** (e.g. `nb06`): use
+    `parent_id IS NULL`. This counts each split once at the parent's full
+    amount and drops the children - which is exactly what the bank posts
+    (one charge per split). `(parent_id IS NULL OR has_splits=FALSE)` is
+    WRONG here: it also admits the children and double-counts, blowing the
+    balance up by roughly an order of magnitude once every split child is
+    summed on top of its parent.
+  - **Category-scoped spend** (e.g. `nb05`, "what did I spend on X"): use
+    `(parent_id IS NULL OR has_splits=FALSE)`. The double-count is harmless
+    only because a `WHERE category_name = ?` filter excludes the split
+    parent (its category is `Split`/null), leaving just the child. Don't
+    use this filter for an unfiltered total - it double-counts.
 - **Transfers**: payee starts with `Transfer :`. They don't carry
   categories on the budget side. Filter them out for review/spending
   analyses.

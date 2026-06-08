@@ -40,6 +40,7 @@ the contract.
 | `nb03_review` | `payee_top_categories(con, payee_id, days=180)`, `suggest_category(con, payee_id, days=180)`, `pending(days=30, history_days=180)` | Pending-review table (uncategorized / unapproved / uncleared, transfers excluded) with payee-history suggestions. Read-only. |
 | `nb04_bulk_edit` | `propose_apply_suggestions(days=30, history_days=180, min_history=2)`, `apply_edits(plan, dry_run=True)` | Build a patch plan from `pending()`, optionally apply via YNAB bulk PATCH. **Default is dry-run.** Auto re-syncs cache after a real apply. |
 | `nb05_export` | `export_transactions(path, since, until, format)`, `monthly_category_summary(year)`, `payee_totals(days, top_n)` | Parquet/csv dumps to `data/exports/`, month x category spend, top payees by absolute spend. |
+| `nb06_reconcile` | `load_statement(path, bank='fidelity')`, `reconcile(account_name, statement, since, until)` | Parse a bank statement CSV (per-bank column map in `BANK_FORMATS`) and diff it against an account: amount-pooled matching returns charges missing from YNAB, YNAB rows not on the statement, and the cleared-vs-bank delta. Read-only. Balance/matching uses `parent_id IS NULL` (not the spend filter) - see the splits note in CLAUDE.md. |
 
 When the question isn't obviously one of these, **read the catalog file
 itself** (not just this table) before inventing new code. Helpers have
