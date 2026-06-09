@@ -29,6 +29,7 @@ the SQL each time.
 | `nb03_review.py` | Pending-review table with payee-history category suggestions. |
 | `nb04_bulk_edit.py` | Build a patch plan and apply via the YNAB bulk endpoint. Dry-run by default. |
 | `nb05_export.py` | Parquet/CSV exports, monthly category summaries, top payees. |
+| `nb06_reconcile.py` | Diff a downloaded bank statement CSV against an account; amount-pooled matching surfaces what's missing, pending, or mismatched. Read-only. |
 
 ## Quickstart
 
@@ -75,6 +76,13 @@ them and the number will be wrong:
   double-counting split parents alongside their subtransactions.
 - `COALESCE(payee_name, '') NOT LIKE 'Transfer :%'` - inter-account
   transfers don't carry categories on the budget side.
+
+This split filter is for **category-scoped spend** ("what did I spend on
+X"), where a `WHERE category_name = ?` clause excludes the split parent.
+For an **account balance or statement match** (`nb06`) use
+`parent_id IS NULL` instead - the spend filter also admits split children
+and double-counts, inflating the balance by roughly an order of
+magnitude. See the splits note in `CLAUDE.md`.
 
 Amounts are stored in **milliunits** (×1000); divide by 1000.0 for
 dollars.
