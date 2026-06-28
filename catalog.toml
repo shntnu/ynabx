@@ -23,8 +23,8 @@ does     = "Open the DuckDB cache, ensure schema, delta-sync transactions via YN
 
 [[vignette]]
 notebook = "nb03_review.py"
-helpers  = ["payee_top_categories", "suggest_category", "pending"]
-does     = "Pending-review table (uncategorized/unapproved/uncleared, transfers excluded) with payee-history category suggestions. Read-only."
+helpers  = ["payee_top_categories", "suggest_category", "suggest_by_tokens", "pending"]
+does     = "Pending-review table (uncategorized/unapproved/uncleared, transfers excluded) with payee-history category suggestions. suggest_by_tokens is a name-token fallback for NEW payees the exact-payee suggester can't see (noisy; suggest-then-confirm). Read-only."
 
 [[vignette]]
 notebook = "nb04_bulk_edit.py"
