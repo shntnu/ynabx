@@ -7,6 +7,9 @@ notebooks/__marimo__/
 # direnv: holds personal 1P vault path. Use .envrc.example as a template.
 .envrc
 
+# Personal goal-loop state (real numbers). The framework lives in tracked GOALS.md.
+goals.local.md
+
 # Installed skills: recorded in the tracked skills-lock.json, NOT vendored.
 # A fresh clone restores them with `npx skills update`.
 .agents/
