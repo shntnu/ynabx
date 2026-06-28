@@ -1,1 +1,1 @@
-export YNAB_OP_REF="op://Personal/YNAB/PAT"
+export YNAB_OP_REF="op://Vault/Item/Field"

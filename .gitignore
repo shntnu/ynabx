@@ -1,13 +1,26 @@
-# Local DuckDB cache + exports (personal data)
+# Local DuckDB cache + exports (personal data) - NEVER commit anything under here
 data/
+
+# marimo caches and exported session snapshots - would leak financial data
+notebooks/__marimo__/
 
 # direnv: holds personal 1P vault path. Use .envrc.example as a template.
 .envrc
 
-# Python
+# Installed skills: recorded in the tracked skills-lock.json, NOT vendored.
+# A fresh clone restores them with `npx skills update`.
+.agents/
+.claude/skills/*
+
+# Claude Code worktrees (subagent / `claude --worktree` scratch checkouts)
+.claude/worktrees/
+
+# Python and tool caches
 __pycache__/
 *.pyc
 .venv/
+uv.lock
+.ruff_cache/
 .pytest_cache/
 
 # Per-machine Claude Code permission accumulation

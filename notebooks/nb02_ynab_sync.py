@@ -110,9 +110,7 @@ def connect() -> duckdb.DuckDBPyConnection:
 @app.function(hide_code=True)
 def last_knowledge(con: duckdb.DuckDBPyConnection, budget_id: str) -> int:
     """Last server_knowledge stored for this budget; 0 if never synced."""
-    row = con.execute(
-        "SELECT server_knowledge FROM meta WHERE budget_id = ?", [budget_id]
-    ).fetchone()
+    row = con.execute("SELECT server_knowledge FROM meta WHERE budget_id = ?", [budget_id]).fetchone()
     return row[0] if row else 0
 
 
@@ -137,9 +135,7 @@ def sync(budget_id: str | None = None) -> dict:
     con = connect()
     since = last_knowledge(con, bid)
 
-    payload = get(
-        f"/budgets/{bid}/transactions", last_knowledge_of_server=since
-    )
+    payload = get(f"/budgets/{bid}/transactions", last_knowledge_of_server=since)
     new_sk = payload["server_knowledge"]
     txns = payload["transactions"]
 
@@ -250,21 +246,11 @@ def status() -> dict:
     con = connect()
     out = {
         "db_path": str(DB_PATH),
-        "rows_total": con.execute(
-            "SELECT COUNT(*) FROM transactions"
-        ).fetchone()[0],
-        "rows_alive": con.execute(
-            "SELECT COUNT(*) FROM transactions WHERE NOT deleted"
-        ).fetchone()[0],
-        "split_parents": con.execute(
-            "SELECT COUNT(*) FROM transactions WHERE has_splits"
-        ).fetchone()[0],
-        "date_min": con.execute(
-            "SELECT MIN(date) FROM transactions"
-        ).fetchone()[0],
-        "date_max": con.execute(
-            "SELECT MAX(date) FROM transactions"
-        ).fetchone()[0],
+        "rows_total": con.execute("SELECT COUNT(*) FROM transactions").fetchone()[0],
+        "rows_alive": con.execute("SELECT COUNT(*) FROM transactions WHERE NOT deleted").fetchone()[0],
+        "split_parents": con.execute("SELECT COUNT(*) FROM transactions WHERE has_splits").fetchone()[0],
+        "date_min": con.execute("SELECT MIN(date) FROM transactions").fetchone()[0],
+        "date_max": con.execute("SELECT MAX(date) FROM transactions").fetchone()[0],
         "meta": con.execute("SELECT * FROM meta").fetchall(),
     }
     con.close()

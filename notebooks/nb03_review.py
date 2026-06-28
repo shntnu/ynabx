@@ -65,9 +65,7 @@ def _():
 
 
 @app.function(hide_code=True)
-def payee_top_categories(
-    con: duckdb.DuckDBPyConnection, payee_id: str, days: int = 180
-) -> list[tuple[str, str, int]]:
+def payee_top_categories(con: duckdb.DuckDBPyConnection, payee_id: str, days: int = 180) -> list[tuple[str, str, int]]:
     """Most-common categories for a payee in the last `days`.
 
     Returns a list of (category_name, category_id, count), descending by count.
@@ -92,9 +90,7 @@ def payee_top_categories(
 
 
 @app.function(hide_code=True)
-def suggest_category(
-    con: duckdb.DuckDBPyConnection, payee_id: str, days: int = 180
-) -> tuple[str, str] | None:
+def suggest_category(con: duckdb.DuckDBPyConnection, payee_id: str, days: int = 180) -> tuple[str, str] | None:
     """Top historical (category_name, category_id) for a payee, or None."""
     tops = payee_top_categories(con, payee_id, days)
     return (tops[0][0], tops[0][1]) if tops else None
@@ -161,10 +157,9 @@ def pending(days: int = 30, history_days: int = 180) -> pl.DataFrame:
         pl.Series("suggested_category_id", sug_ids),
     )
     df = df.with_columns(
-        (
-            (pl.col("current_category") == pl.col("suggested_category"))
-            | pl.col("suggested_category").is_null()
-        ).alias("agree"),
+        ((pl.col("current_category") == pl.col("suggested_category")) | pl.col("suggested_category").is_null()).alias(
+            "agree"
+        ),
         (
             (pl.col("current_category") == "Uncategorized")
             | (

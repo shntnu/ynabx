@@ -63,9 +63,7 @@ def propose_apply_suggestions(
       - that suggestion appeared at least `min_history` times historically
     """
     df = pending(days=days, history_days=history_days)
-    df = df.filter(
-        pl.col("needs_review") & pl.col("suggested_category_id").is_not_null()
-    )
+    df = df.filter(pl.col("needs_review") & pl.col("suggested_category_id").is_not_null())
 
     # Filter on min_history: re-look up payee history count
     con = connect()
@@ -111,8 +109,7 @@ def apply_edits(plan: pl.DataFrame, dry_run: bool = True) -> dict:
 
     body = {
         "transactions": [
-            {"id": row["id"], "category_id": row["suggested_category_id"]}
-            for row in plan.iter_rows(named=True)
+            {"id": row["id"], "category_id": row["suggested_category_id"]} for row in plan.iter_rows(named=True)
         ]
     }
 
@@ -156,9 +153,7 @@ def _(plan):
         plan_final = (
             plan.with_columns(
                 pl.col("id")
-                .map_elements(
-                    lambda i: overrides.get(i, None), return_dtype=pl.String
-                )
+                .map_elements(lambda i: overrides.get(i, None), return_dtype=pl.String)
                 .alias("_override_cid"),
             )
             .with_columns(

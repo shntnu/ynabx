@@ -122,10 +122,7 @@ def export_transactions(
 def _():
     _path = export_transactions(format="parquet")
     _size_mb = _path.stat().st_size / 1024 / 1024
-    mo.md(
-        f"### Transactions export\n\n"
-        f"Wrote `{_path.name}` ({_size_mb:.2f} MB) to `{_path.parent}`."
-    )
+    mo.md(f"### Transactions export\n\nWrote `{_path.name}` ({_size_mb:.2f} MB) to `{_path.parent}`.")
     return
 
 

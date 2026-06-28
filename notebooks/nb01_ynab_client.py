@@ -59,7 +59,7 @@ def get_token() -> str:
 
     Resolution order:
       1. `YNAB_TOKEN` env var (simplest; works in CI and one-off scripts).
-      2. `op read $YNAB_OP_REF` if `YNAB_OP_REF` is set (e.g. `op://Personal/YNAB/PAT`).
+      2. `op read $YNAB_OP_REF` if `YNAB_OP_REF` is set (e.g. `op://Vault/Item/Field`).
 
     Cached for the lifetime of the kernel: 1Password's biometric prompt
     times out between calls, so we read once and reuse.
@@ -78,8 +78,7 @@ def get_token() -> str:
                 token = res.stdout.strip()
         if not token:
             raise RuntimeError(
-                "No YNAB token. Set YNAB_TOKEN, or set YNAB_OP_REF "
-                "(e.g. op://Personal/YNAB/PAT) to read from 1Password."
+                "No YNAB token. Set YNAB_TOKEN, or set YNAB_OP_REF (e.g. op://Vault/Item/Field) to read from 1Password."
             )
         get_token._cache = token
     return get_token._cache
@@ -131,9 +130,7 @@ def _():
 def list_budgets() -> list[dict]:
     """Return all budgets visible to the token, newest-first by last_modified_on."""
     budgets = get("/budgets")["budgets"]
-    return sorted(
-        budgets, key=lambda b: b["last_modified_on"] or "", reverse=True
-    )
+    return sorted(budgets, key=lambda b: b["last_modified_on"] or "", reverse=True)
 
 
 @app.function(hide_code=True)
