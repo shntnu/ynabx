@@ -40,3 +40,13 @@ does     = "Parquet/CSV exports, month x category spend summaries, top payees by
 notebook = "nb06_reconcile.py"
 helpers  = ["load_statement", "reconcile"]
 does     = "Diff a bank-statement CSV against a YNAB account via amount-pooled matching: charges missing from YNAB, YNAB rows not on the statement, cleared-vs-bank delta. Read-only. Balance matching uses parent_id IS NULL, not the spend filter."
+
+[[vignette]]
+notebook = "nb07_budget_assign.py"
+helpers  = ["anticipate", "assign"]
+does     = "Monthly budget-assignment planner. anticipate(month) proposes a per-category assignment (goaled -> goal_under_funded; else max of recency-weighted seasonal p75, a trailing-3mo regime guard, and the scheduled-bill floor, net of available; reimbursables deferred; lumpy categories flagged) and sweeps the remainder to the catch-all so Ready to Assign hits 0. assign(plan, month) tops up budgeted via PATCH months/{month}/categories; dry-run by default. Backtested by data/exports/backtest_anticipation.py."
+
+[[vignette]]
+notebook = "nb08_adp_paystubs.py"
+helpers  = ["latest_adp_export", "load_adp", "export_adp_csv", "validate_adp"]
+does     = "Normalize a private MyADP pay-statement JSON export into paycheck, earning/deduction, and direct-deposit tables plus CSV files."
