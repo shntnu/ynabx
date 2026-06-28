@@ -55,6 +55,21 @@ Then clear outputs before commit (see Privacy).
 - **Budgets.** `active_budget_id()` picks the most-recently-modified budget; pass an explicit id from `list_budgets()` for any other.
 - **Auth.** `get_token()` reads `YNAB_TOKEN`, else `op read $YNAB_OP_REF`. Token is cached at module level (1Password biometric prompts time out between calls). `op` "authorization timeout" = 1Password app locked; unlock and retry.
 
+## Reconciliation & import mechanics (hard-won; this recurs every reconcile)
+
+The catalog reads and analyzes; reconciliation itself is mostly native-app plus irreducible human verification the API can't automate. Know these before touching `cleared`/`reconciled` state, deleting transfer legs, or "correcting" a balance.
+
+- **Three states.** `uncleared` (entered, bank hasn't confirmed) -> `cleared` (confirmed/matched) -> `reconciled` (locked against a statement). `import_id` present = bank-fed/real; `import_id IS NULL` = manual entry OR a scheduled-transaction placeholder. Null-import rows are not backlog - they are predictions awaiting a bank match.
+- **Transfers have two legs.** The bank-linked side clears via import; the manual/tracking side (loan, 401k, asset accounts) never auto-clears - mark it cleared by hand when reconciling those accounts. Deleting one leg via the API deletes both.
+- **CC-payment double-entry trap.** When both the paying checking account and the credit card are linked, one payment imports from *both* sides. If the two imports post a few days apart, YNAB fails to merge them, treats each as its own transfer, and invents the missing counter-leg - guessing the source checking account, often wrong. Result: a duplicate payment with a phantom leg. Prevention: **match** the two imported legs into one transfer; never approve them as two separate transfers, and don't let a manual/scheduled CC-payment entry compete with the imports.
+- **Matched-import absorption.** When YNAB matches an import into an existing transaction, the imported row 404s on single-GET but lingers in the DuckDB cache as a separate `import_id` row. `nb02.reconcile()` prunes these (full `since_date` pull, prune-by-absence, size-guarded). Confirm a suspected twin with a single-GET (404 = absorbed, prune it; 200 = live, leave it).
+- **Statement balance != current balance.** The statement balance is a snapshot at the close date; the current balance includes everything posted since. Reconcile to the *current* balance. A YNAB-vs-statement "mismatch" is often just a legitimate post-statement charge.
+- **Connection tiers.** `direct_import_linked` says an account is connected, but the API does NOT expose the bank-feed balance. In-app, connected accounts split into balance-confirmed (green auto-match - trust the click) and transaction-only ("Is your balance X?" - YNAB just echoes its own number; verify against the real account yourself).
+- **Tracking/investment accounts reconcile by adjust-to-value** (market drift is expected; you don't record trades). The API cannot create the native "Reconciliation Balance Adjustment" payee (it is a blocked internal name); use the in-app Reconcile button, or post a plain transaction for the delta.
+- **A missing recurring charge may be an import GAP, not a cancelled sub.** Check import continuity (date gaps among `import_id` rows) before concluding a subscription lapsed; File-Import the statement (OFX/QFX/CSV) to backfill - YNAB dedupes by `import_id`.
+- **Don't blind-adjust an on-budget checking discrepancy.** A large gap there is missing transactions (import them - the real activity matters), not market drift; an on-budget reconciliation adjustment silently distorts the budget.
+- **Verify against external truth before destructive ops.** The cache only reflects what YNAB imported, which lags or gaps versus the bank; absence in the cache != absence in reality. Confirm against the statement / current balance / a single-GET before deleting or "fixing", and weight the account owner's domain knowledge heavily.
+
 ## Conventions
 
 Semantic line breaks in markdown. ASCII-only. Conventional Commits. `ruff line-length = 120` is Python only.
