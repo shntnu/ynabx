@@ -10,7 +10,7 @@
 
 import marimo
 
-__generated_with = "0.23.3"
+__generated_with = "0.23.11"
 app = marimo.App(width="medium")
 
 with app.setup:
@@ -32,6 +32,87 @@ with app.setup:
         sys.path.insert(0, str(NOTEBOOK_DIR))
 
     from nb01_ynab_client import active_budget_id, get
+
+    def _txn_rows(txns: list[dict]) -> list[tuple]:
+        """Flatten a YNAB transactions payload into DuckDB row tuples.
+
+        One row per leaf; split parents get has_splits=True and their
+        subtransactions become separate rows with parent_id set.
+        """
+        rows = []
+        for t in txns:
+            subs = t.get("subtransactions") or []
+            rows.append(
+                (
+                    t["id"],
+                    None,
+                    t["date"],
+                    t["amount"],
+                    t.get("payee_id"),
+                    t.get("payee_name"),
+                    t.get("category_id"),
+                    t.get("category_name"),
+                    t["account_id"],
+                    t.get("account_name"),
+                    t.get("memo"),
+                    t.get("cleared"),
+                    t.get("approved"),
+                    t.get("flag_color"),
+                    t.get("import_id"),
+                    t.get("import_payee_name"),
+                    t.get("import_payee_name_original"),
+                    bool(subs),
+                    t.get("deleted", False),
+                )
+            )
+            for sub in subs:
+                rows.append(
+                    (
+                        sub["id"],
+                        t["id"],
+                        t["date"],
+                        sub["amount"],
+                        sub.get("payee_id") or t.get("payee_id"),
+                        sub.get("payee_name") or t.get("payee_name"),
+                        sub.get("category_id"),
+                        sub.get("category_name"),
+                        t["account_id"],
+                        t.get("account_name"),
+                        sub.get("memo"),
+                        t.get("cleared"),
+                        t.get("approved"),
+                        t.get("flag_color"),
+                        t.get("import_id"),
+                        t.get("import_payee_name"),
+                        t.get("import_payee_name_original"),
+                        False,
+                        sub.get("deleted", False),
+                    )
+                )
+        return rows
+
+    def _upsert(con: duckdb.DuckDBPyConnection, rows: list[tuple]) -> int:
+        """Upsert row tuples (from _txn_rows) into the transactions table."""
+        if not rows:
+            return 0
+        con.executemany(
+            """
+            INSERT INTO transactions VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+            ON CONFLICT (id) DO UPDATE SET
+                parent_id=EXCLUDED.parent_id, date=EXCLUDED.date,
+                amount_milli=EXCLUDED.amount_milli,
+                payee_id=EXCLUDED.payee_id, payee_name=EXCLUDED.payee_name,
+                category_id=EXCLUDED.category_id, category_name=EXCLUDED.category_name,
+                account_id=EXCLUDED.account_id, account_name=EXCLUDED.account_name,
+                memo=EXCLUDED.memo, cleared=EXCLUDED.cleared, approved=EXCLUDED.approved,
+                flag_color=EXCLUDED.flag_color, import_id=EXCLUDED.import_id,
+                import_payee_name=EXCLUDED.import_payee_name,
+                import_payee_name_original=EXCLUDED.import_payee_name_original,
+                has_splits=EXCLUDED.has_splits, deleted=EXCLUDED.deleted
+        """,
+            rows,
+        )
+        return len(rows)
 
 
 @app.cell(hide_code=True)
@@ -58,6 +139,13 @@ def _():
 
     Run `sync()` to bring the cache up to date. Idempotent: re-running with
     no remote changes returns 0 rows upserted in <1s.
+
+    `reconcile()` is the occasional deep clean: the delta feed leaves behind
+    imports that YNAB later *matches* into another transaction (they 404 and
+    get no deletion tombstone), so they linger as duplicate rows and
+    double-count in spend. reconcile() pulls the full `since_date` snapshot and
+    prunes anything absent from it - with a guard that aborts if the pull comes
+    back suspiciously short.
     """)
     return
 
@@ -129,6 +217,11 @@ def sync(budget_id: str | None = None) -> dict:
     Uses YNAB's server_knowledge cursor: only changed records since the last
     sync are returned. Idempotent - calling repeatedly returns 0 new rows.
 
+    Note: the delta feed includes import rows that YNAB later *matches* into an
+    existing transaction. Once matched they 404 individually and carry no
+    deletion tombstone, so sync() can never remove them - they linger as
+    duplicate rows. Run reconcile() periodically to prune them.
+
     Returns a dict with counts and the new server_knowledge value.
     """
     bid = budget_id or active_budget_id()
@@ -139,78 +232,8 @@ def sync(budget_id: str | None = None) -> dict:
     new_sk = payload["server_knowledge"]
     txns = payload["transactions"]
 
-    rows = []
-    for t in txns:
-        subs = t.get("subtransactions") or []
-        has_splits = bool(subs)
-        rows.append(
-            (
-                t["id"],
-                None,
-                t["date"],
-                t["amount"],
-                t.get("payee_id"),
-                t.get("payee_name"),
-                t.get("category_id"),
-                t.get("category_name"),
-                t["account_id"],
-                t.get("account_name"),
-                t.get("memo"),
-                t.get("cleared"),
-                t.get("approved"),
-                t.get("flag_color"),
-                t.get("import_id"),
-                t.get("import_payee_name"),
-                t.get("import_payee_name_original"),
-                has_splits,
-                t.get("deleted", False),
-            )
-        )
-        for sub in subs:
-            rows.append(
-                (
-                    sub["id"],
-                    t["id"],
-                    t["date"],
-                    sub["amount"],
-                    sub.get("payee_id") or t.get("payee_id"),
-                    sub.get("payee_name") or t.get("payee_name"),
-                    sub.get("category_id"),
-                    sub.get("category_name"),
-                    t["account_id"],
-                    t.get("account_name"),
-                    sub.get("memo"),
-                    t.get("cleared"),
-                    t.get("approved"),
-                    t.get("flag_color"),
-                    t.get("import_id"),
-                    t.get("import_payee_name"),
-                    t.get("import_payee_name_original"),
-                    False,
-                    sub.get("deleted", False),
-                )
-            )
-
-    n_upserted = 0
-    if rows:
-        con.executemany(
-            """
-            INSERT INTO transactions VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-            ON CONFLICT (id) DO UPDATE SET
-                parent_id=EXCLUDED.parent_id, date=EXCLUDED.date,
-                amount_milli=EXCLUDED.amount_milli,
-                payee_id=EXCLUDED.payee_id, payee_name=EXCLUDED.payee_name,
-                category_id=EXCLUDED.category_id, category_name=EXCLUDED.category_name,
-                account_id=EXCLUDED.account_id, account_name=EXCLUDED.account_name,
-                memo=EXCLUDED.memo, cleared=EXCLUDED.cleared, approved=EXCLUDED.approved,
-                flag_color=EXCLUDED.flag_color, import_id=EXCLUDED.import_id,
-                import_payee_name=EXCLUDED.import_payee_name,
-                import_payee_name_original=EXCLUDED.import_payee_name_original,
-                has_splits=EXCLUDED.has_splits, deleted=EXCLUDED.deleted
-        """,
-            rows,
-        )
-        n_upserted = len(rows)
+    rows = _txn_rows(txns)
+    n_upserted = _upsert(con, rows)
 
     con.execute(
         """
@@ -229,6 +252,69 @@ def sync(budget_id: str | None = None) -> dict:
         "new_knowledge": new_sk,
         "txns_in_payload": len(txns),
         "rows_upserted": n_upserted,
+    }
+
+
+@app.function(hide_code=True)
+def reconcile(budget_id: str | None = None, prune_guard: float = 0.9) -> dict:
+    """Align the cache to YNAB's authoritative full snapshot, pruning stale rows.
+
+    sync() can leave duplicate rows behind: the delta feed includes imports that
+    YNAB later matches/absorbs, and those never get a deletion tombstone. This
+    pulls the *full* history via `since_date` (NOT `last_knowledge_of_server`,
+    which YNAB caps to a rolling ~1 year) - that snapshot is the clean current
+    state and excludes the absorbed twins. We upsert it, then DELETE any cache
+    row whose id is absent from it.
+
+    Safety: refuses to prune if the snapshot's live-row count is below
+    `prune_guard` x the current cache (default 90%). A short/partial pull (e.g.
+    the ~1yr window) trips this and aborts rather than deleting real history.
+
+    Returns counts incl. `rows_pruned` (-1 if the guard aborted the prune).
+    """
+    bid = budget_id or active_budget_id()
+    con = connect()
+
+    payload = get(f"/budgets/{bid}/transactions", since_date="2000-01-01")
+    new_sk = payload["server_knowledge"]
+    txns = payload["transactions"]
+    rows = _txn_rows(txns)
+
+    cache_alive = con.execute("SELECT COUNT(*) FROM transactions WHERE NOT deleted").fetchone()[0]
+    live_ids = {r[0] for r in rows if not r[18]}  # r[18] = deleted flag
+
+    aborted = bool(cache_alive) and len(live_ids) < prune_guard * cache_alive
+    n_upserted = _upsert(con, rows)
+
+    n_pruned = -1
+    if not aborted and live_ids:
+        con.execute("CREATE TEMP TABLE _live (id VARCHAR)")
+        con.executemany("INSERT INTO _live VALUES (?)", [(i,) for i in live_ids])
+        n_pruned = con.execute(
+            "SELECT COUNT(*) FROM transactions WHERE NOT deleted AND id NOT IN (SELECT id FROM _live)"
+        ).fetchone()[0]
+        con.execute("DELETE FROM transactions WHERE NOT deleted AND id NOT IN (SELECT id FROM _live)")
+        con.execute("DROP TABLE _live")
+
+    con.execute(
+        """
+        INSERT INTO meta VALUES (?, ?, ?)
+        ON CONFLICT (budget_id) DO UPDATE SET
+            server_knowledge=EXCLUDED.server_knowledge,
+            last_synced_at=EXCLUDED.last_synced_at
+    """,
+        [bid, new_sk, dt.datetime.now()],
+    )
+    con.close()
+
+    return {
+        "budget_id": bid,
+        "snapshot_live": len(live_ids),
+        "cache_alive_before": cache_alive,
+        "rows_upserted": n_upserted,
+        "rows_pruned": n_pruned,
+        "prune_aborted": aborted,
+        "new_knowledge": new_sk,
     }
 
 

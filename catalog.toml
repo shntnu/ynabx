@@ -18,8 +18,8 @@ does     = "Auth (token via env or 1Password) + thin HTTP wrappers over api.ynab
 
 [[vignette]]
 notebook = "nb02_ynab_sync.py"
-helpers  = ["connect", "last_knowledge", "sync", "status"]
-does     = "Open the DuckDB cache, ensure schema, delta-sync transactions via YNAB's server_knowledge cursor (idempotent)."
+helpers  = ["connect", "last_knowledge", "sync", "status", "reconcile"]
+does     = "Open the DuckDB cache, ensure schema, delta-sync transactions via YNAB's server_knowledge cursor (idempotent). reconcile() does a full since_date pull to prune stale matched-import duplicates the delta feed leaves behind (guard-aborts on a short pull)."
 
 [[vignette]]
 notebook = "nb03_review.py"
