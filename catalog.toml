@@ -35,3 +35,8 @@ does     = "Build a patch plan and apply via the YNAB bulk PATCH endpoint. Dry-r
 notebook = "nb05_export.py"
 helpers  = ["export_transactions", "monthly_category_summary", "payee_totals"]
 does     = "Parquet/CSV exports, month x category spend summaries, top payees by absolute spend."
+
+[[vignette]]
+notebook = "nb06_reconcile.py"
+helpers  = ["load_statement", "reconcile"]
+does     = "Diff a bank-statement CSV against a YNAB account via amount-pooled matching: charges missing from YNAB, YNAB rows not on the statement, cleared-vs-bank delta. Read-only. Balance matching uses parent_id IS NULL, not the spend filter."

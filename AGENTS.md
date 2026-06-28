@@ -47,10 +47,10 @@ Then clear outputs before commit (see Privacy).
 ## Domain invariants (get these wrong and the numbers are wrong)
 
 - **Milliunits.** Amounts are stored x1000. Always `amount_milli / 1000.0` for dollars.
-- **Three always-on filters** for any spend aggregation:
+- **Filters for spend aggregation** (skip any and the number is wrong):
   - `NOT deleted` - YNAB soft-deletes; tombstones stay in the table.
-  - `(parent_id IS NULL OR has_splits = FALSE)` - prevents double-counting split parents alongside their subtransactions.
   - `COALESCE(payee_name, '') NOT LIKE 'Transfer :%'` - inter-account transfers carry no category on the budget side.
+  - **Split filter is question-dependent.** For category-scoped spend ("what did I spend on X", e.g. nb05) use `(parent_id IS NULL OR has_splits = FALSE)` - the `WHERE category_name = ?` clause excludes the split parent. For an account balance or statement match (e.g. nb06) use `parent_id IS NULL` instead; the spend filter also admits split children and double-counts, inflating the balance by ~10x.
 - **Writes are dry-run by default.** Anything that mutates YNAB goes through `nb04.apply_edits(plan, dry_run=False)` - never `nb01.patch(...)` directly, or the cache desyncs. Show the plan and get confirmation before flipping the flag.
 - **Budgets.** `active_budget_id()` picks the most-recently-modified budget; pass an explicit id from `list_budgets()` for any other.
 - **Auth.** `get_token()` reads `YNAB_TOKEN`, else `op read $YNAB_OP_REF`. Token is cached at module level (1Password biometric prompts time out between calls). `op` "authorization timeout" = 1Password app locked; unlock and retry.

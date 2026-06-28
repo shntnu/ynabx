@@ -99,9 +99,7 @@ def _():
 
 
 @app.function(hide_code=True)
-def load_statement(
-    path: str, bank: str = "fidelity"
-) -> list[tuple[dt.date, str, float]]:
+def load_statement(path: str, bank: str = "fidelity") -> list[tuple[dt.date, str, float]]:
     """Parse a bank statement CSV into `(date, payee, amount)` rows.
 
     `amount` is signed: negative for charges/outflows, positive for
@@ -111,10 +109,7 @@ def load_statement(
     isolated to that one dict.
     """
     if bank not in BANK_FORMATS:
-        raise ValueError(
-            f"unknown bank {bank!r}; known: {sorted(BANK_FORMATS)}. "
-            "Add a column map to BANK_FORMATS."
-        )
+        raise ValueError(f"unknown bank {bank!r}; known: {sorted(BANK_FORMATS)}. Add a column map to BANK_FORMATS.")
     fmt = BANK_FORMATS[bank]
     rows: list[tuple[dt.date, str, float]] = []
     with open(path, newline="") as f:
@@ -218,9 +213,7 @@ def reconcile(
         for d, payee, cleared in y[n:]:
             pending.append((d, amount, payee, cleared))
 
-    missing_df = pl.DataFrame(
-        sorted(missing), schema=["date", "amount", "payee"], orient="row"
-    )
+    missing_df = pl.DataFrame(sorted(missing), schema=["date", "amount", "payee"], orient="row")
     pending_df = pl.DataFrame(
         sorted(pending),
         schema=["date", "amount", "payee", "cleared"],
@@ -254,9 +247,7 @@ def _():
     _con = connect()
     _accounts = [
         r[0]
-        for r in _con.execute(
-            "SELECT DISTINCT account_name FROM transactions WHERE NOT deleted ORDER BY 1"
-        ).fetchall()
+        for r in _con.execute("SELECT DISTINCT account_name FROM transactions WHERE NOT deleted ORDER BY 1").fetchall()
     ]
     _con.close()
     account = mo.ui.dropdown(
@@ -264,12 +255,8 @@ def _():
         value="Fidelity CC" if "Fidelity CC" in _accounts else _accounts[0],
         label="Account",
     )
-    bank_fmt = mo.ui.dropdown(
-        list(BANK_FORMATS.keys()), value="fidelity", label="Bank format"
-    )
-    csv_path = mo.ui.text(
-        placeholder="/path/to/statement.csv", label="Statement CSV", full_width=True
-    )
+    bank_fmt = mo.ui.dropdown(list(BANK_FORMATS.keys()), value="fidelity", label="Bank format")
+    csv_path = mo.ui.text(placeholder="/path/to/statement.csv", label="Statement CSV", full_width=True)
     since = mo.ui.text(value="2026-01-01", label="Since (YYYY-MM-DD)")
     until = mo.ui.text(value="2026-01-31", label="Until (YYYY-MM-DD)")
     closing = mo.ui.text(
@@ -336,9 +323,7 @@ def _(account, bank_fmt, closing, csv_path, run, since, until):
             if _missing.height
             else mo.md("_None - every statement charge has a YNAB match._"),
             mo.md("#### In YNAB, not on statement"),
-            mo.ui.table(_pending, page_size=25, selection=None)
-            if _pending.height
-            else mo.md("_None._"),
+            mo.ui.table(_pending, page_size=25, selection=None) if _pending.height else mo.md("_None._"),
         ]
     )
     return
