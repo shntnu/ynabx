@@ -51,6 +51,23 @@ def _():
     return
 
 
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    ## Import a fresh ADP history
+
+    Sign in to MyADP, open the browser developer console on the MyADP page, and run the contents of
+    `scripts/import_adp.js`.
+    Move the downloaded `adp-pay-statements-*.json` file into `data/raw/adp/`, then rerun this notebook.
+
+    The notebook selects the newest export, validates it, and rewrites the normalized CSVs under
+    `data/interim/adp/`.
+    Run `nb02_ynab_sync.py` first when the local YNAB cache needs refreshing.
+    The exporter uses MyADP's undocumented web endpoint, so it may need updating if ADP changes the site.
+    """)
+    return
+
+
 @app.function(hide_code=True)
 def latest_adp_export(raw_dir: str | Path = DATA_DIR / "raw" / "adp") -> Path:
     """Return the newest immutable MyADP JSON export."""
