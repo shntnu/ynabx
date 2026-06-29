@@ -48,5 +48,10 @@ does     = "Monthly budget-assignment planner. anticipate(month) proposes a per-
 
 [[vignette]]
 notebook = "nb08_adp_paystubs.py"
-helpers  = ["latest_adp_export", "load_adp", "export_adp_csv", "validate_adp"]
-does     = "Normalize a private MyADP pay-statement JSON export into paycheck, earning/deduction, and direct-deposit tables plus CSV files."
+helpers  = ["latest_adp_export", "load_adp", "export_adp_csv", "validate_adp", "income_history", "income_stability", "split_variation", "match_ynab_deposits"]
+does     = "Validate and normalize private MyADP pay statements, measure recurring-income stability, rank paycheck-split drivers, and match deposits to local YNAB inflows."
+
+[[vignette]]
+notebook = "nb09_reimbursements.py"
+helpers  = ["whole", "outstanding", "leaks"]
+does     = "Reimbursable ledger read off the category balance, not flags/memos. whole() = the truth (balance; ~0 = settled) plus a flag-drift check (orange rows should net to the balance); outstanding() = chase list of open (orange-flagged) rows grouped by reimburser (the memo prefix before ':'); leaks() = reimbursement money booked OUTSIDE the category (wires/refunds in income/RTA) to re-categorize. Read-only; reconcile() (not sync) after bulk memo edits."
