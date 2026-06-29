@@ -30,7 +30,7 @@ with app.setup:
     # Generic name fragments that carry no category signal - dropped from token matching.
     # In app.setup so it's in scope for the @app.function helpers (marimo demotes a bare
     # module-level assignment between cells and it goes undefined at import).
-    _TOKEN_STOP = frozenset(
+    TOKEN_STOP = frozenset(
         "the of and llc inc ltd co store shop vending sub subscription payments com www "
         "city premium outlet outlets de se us usa new place house bar group services".split()
     )
@@ -138,7 +138,7 @@ def suggest_by_tokens(
     tokens = {
         t
         for t in re.split(r"[^a-z0-9]+", (payee_name or "").lower())
-        if len(t) >= 3 and not t.isdigit() and t not in _TOKEN_STOP
+        if len(t) >= 3 and not t.isdigit() and t not in TOKEN_STOP
     }
     best: tuple[str, str, int, str] | None = None
     for tok in tokens:

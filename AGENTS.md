@@ -36,11 +36,13 @@ Sibling catalogs (dmx, jx, fgx) commit molab session snapshots because their dat
 
 After composing or editing any notebook, run the `validate-notebook.sh` bundled with the installed `vignette-catalog-compose-notebook` skill, passing the notebook path, then open it and look at the outputs.
 Static checks do not catch wrong outputs, empty tables, stale endpoints, broken plots, or sign-convention mistakes.
+The export gate also does NOT exercise the live cell-graph: it resolves names differently from a running kernel and usually can't auth, so a notebook can pass the gate yet throw `NameError` the moment a real authenticated kernel runs the path (see the underscore-`app.setup` trap in Architecture). For anything with live data, drive it in an actual marimo kernel and force the real code path (e.g. call the cell-graph function via `ctx.globals[...]`, not a plain `import`).
 Then clear outputs before commit (see Privacy).
 
 ## Architecture
 
 - Catalog over library. Helpers are top-level `@app.function` cells in numbered notebooks; later notebooks import them via `sys.path` + plain `from nb01_ynab_client import get`.
+- **Shared `app.setup` symbols must NOT start with an underscore.** marimo treats any leading-underscore name as cell-private and rewrites a reference to it (e.g. `_helper()`) into `_cell_<id>_helper` when it appears inside a cell or `@app.function` body. A `_name` defined in `app.setup` is therefore invisible to every cell - the reference raises `NameError` at runtime in a live kernel. It does NOT surface in plain `import` (which closes over module globals), nor in `validate-notebook.sh` (the export path resolves it and usually can't auth to run the data cells), nor when the broken branch is skipped on empty data. It bit nb02/nb03/nb07/nb09. Name shared setup helpers and constants without a leading underscore; reserve `_name` for symbols used only inside the same `app.setup` block.
 - Data surface: a local **DuckDB cache** (`data/ynab.db`) is the source of truth for analysis; `nb02.sync()` delta-syncs it from the **YNAB REST API** (`api.ynab.com/v1`) via the `server_knowledge` cursor. Only sync (nb02) and writes (nb04) touch the network.
 - Do not add a Python package until repeated cross-notebook imports make it painful.
 

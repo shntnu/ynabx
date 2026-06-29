@@ -31,7 +31,7 @@ with app.setup:
     # memo PREFIX (text before the first ':'), e.g. "Acme: hotel". State is NOT
     # tracked in flags or "resolved" memos - it is DERIVED here from the balance.
 
-    def _reimburser(memo: str | None) -> str:
+    def reimburser(memo: str | None) -> str:
         """The reimburser for a row = the memo prefix before the first ':'.
 
         Peels a leading resolved/reimbursed marker first ("Resolved: Acme: flight"
@@ -160,7 +160,7 @@ def outstanding(category: str = "Business") -> pl.DataFrame:
 
     agg: dict[str, dict] = {}
     for amt, memo in rows:
-        d = agg.setdefault(_reimburser(memo), {"net": 0.0, "n": 0})
+        d = agg.setdefault(reimburser(memo), {"net": 0.0, "n": 0})
         d["net"] += amt / 1000.0
         d["n"] += 1
 

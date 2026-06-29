@@ -62,7 +62,7 @@ with app.setup:
         """Target month +/- 1 (wrapping), the comparable-season set for a percentile."""
         return {((tm - 2) % 12) + 1, tm, (tm % 12) + 1}
 
-    def _spend_cells() -> dict:
+    def spend_cells() -> dict:
         """(category, year, month) -> dollars spent, from the DuckDB cache.
 
         Spend filters: not deleted, outflow only, non-transfer, split CHILDREN only
@@ -83,7 +83,7 @@ with app.setup:
         con.close()
         return {(r[0], r[1], r[2]): r[3] for r in rows}
 
-    def _scheduled_monthly(bid: str) -> dict:
+    def scheduled_monthly(bid: str) -> dict:
         """category -> monthly-equivalent scheduled outflow (fixed-bill floor)."""
         out: dict[str, float] = {}
         for s in get(f"/budgets/{bid}/scheduled_transactions")["scheduled_transactions"]:
@@ -94,7 +94,7 @@ with app.setup:
             )
         return out
 
-    def _excluded_ids(bid: str) -> set[str]:
+    def excluded_ids(bid: str) -> set[str]:
         """Category ids in the CC-payment and internal groups (never assigned here)."""
         ids: set[str] = set()
         for g in get(f"/budgets/{bid}/categories")["category_groups"]:
@@ -102,7 +102,7 @@ with app.setup:
                 ids.update(c["id"] for c in g["categories"])
         return ids
 
-    def _seasonal_p(cell: dict, c: str, ty: int, tm: int) -> float:
+    def seasonal_p(cell: dict, c: str, ty: int, tm: int) -> float:
         """Recency-weighted PCT-percentile over same-season months in a WINDOW_YEARS window."""
         season = _season(tm)
         slots = [(y, mn) for y in range(ty - WINDOW_YEARS + 1, ty + 1) for mn in season if (y, mn) < (ty, tm)]
@@ -113,7 +113,7 @@ with app.setup:
         pool.sort()
         return pool[max(0, math.ceil(PCT * len(pool)) - 1)] if pool else 0.0
 
-    def _trailing3(cell: dict, c: str, ty: int, tm: int) -> float:
+    def trailing3(cell: dict, c: str, ty: int, tm: int) -> float:
         """Mean of the 3 calendar months before the target (regime guard for rising costs)."""
         tot = 0.0
         for k in range(1, 4):
@@ -124,7 +124,7 @@ with app.setup:
             tot += cell.get((c, yy, mm), 0.0)
         return tot / 3.0
 
-    def _cov(cell: dict, c: str, ty: int, tm: int) -> float:
+    def cov(cell: dict, c: str, ty: int, tm: int) -> float:
         """Coefficient of variation of seasonal spend across the 4 complete prior years."""
         season = _season(tm)
         yrs = [sum(cell.get((c, y, mn), 0.0) for mn in season) / len(season) for y in range(ty - 4, ty)]
@@ -172,9 +172,9 @@ def anticipate(month: str) -> pl.DataFrame:
     bid = active_budget_id()
     m = get(f"/budgets/{bid}/months/{month}")["month"]
     ty, tm = int(month[:4]), int(month[5:7])
-    cell = _spend_cells()
-    sched = _scheduled_monthly(bid)
-    excl = _excluded_ids(bid)
+    cell = spend_cells()
+    sched = scheduled_monthly(bid)
+    excl = excluded_ids(bid)
     pool = m["to_be_budgeted"] / 1000.0
 
     recs, sweep_id = [], None
@@ -187,15 +187,15 @@ def anticipate(month: str) -> pl.DataFrame:
         avail = c["balance"] / 1000.0
         uf = (c.get("goal_under_funded") or 0) / 1000.0
         sm = sched.get(c["name"], 0.0)
-        p = _seasonal_p(cell, c["name"], ty, tm)
-        t = _trailing3(cell, c["name"], ty, tm)
+        p = seasonal_p(cell, c["name"], ty, tm)
+        t = trailing3(cell, c["name"], ty, tm)
         if c["name"] in REIMBURSABLE:
             assign, basis = 0.0, "reimbursable"
         elif c.get("goal_type"):
             assign, basis = uf, "goal"
         else:
             assign, basis = max(0.0, max(p, t, sm) - avail), "guard"
-        lumpy = basis == "guard" and _cov(cell, c["name"], ty, tm) > LUMPY_COV
+        lumpy = basis == "guard" and cov(cell, c["name"], ty, tm) > LUMPY_COV
         if assign > 0.005 or sm > 0 or p > 0 or t > 0:
             recs.append(
                 {

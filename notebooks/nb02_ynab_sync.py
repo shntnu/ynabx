@@ -33,7 +33,7 @@ with app.setup:
 
     from nb01_ynab_client import active_budget_id, get
 
-    def _txn_rows(txns: list[dict]) -> list[tuple]:
+    def txn_rows(txns: list[dict]) -> list[tuple]:
         """Flatten a YNAB transactions payload into DuckDB row tuples.
 
         One row per leaf; split parents get has_splits=True and their
@@ -91,8 +91,8 @@ with app.setup:
                 )
         return rows
 
-    def _upsert(con: duckdb.DuckDBPyConnection, rows: list[tuple]) -> int:
-        """Upsert row tuples (from _txn_rows) into the transactions table."""
+    def upsert(con: duckdb.DuckDBPyConnection, rows: list[tuple]) -> int:
+        """Upsert row tuples (from txn_rows) into the transactions table."""
         if not rows:
             return 0
         con.executemany(
@@ -232,8 +232,8 @@ def sync(budget_id: str | None = None) -> dict:
     new_sk = payload["server_knowledge"]
     txns = payload["transactions"]
 
-    rows = _txn_rows(txns)
-    n_upserted = _upsert(con, rows)
+    rows = txn_rows(txns)
+    n_upserted = upsert(con, rows)
 
     con.execute(
         """
@@ -278,13 +278,13 @@ def reconcile(budget_id: str | None = None, prune_guard: float = 0.9) -> dict:
     payload = get(f"/budgets/{bid}/transactions", since_date="2000-01-01")
     new_sk = payload["server_knowledge"]
     txns = payload["transactions"]
-    rows = _txn_rows(txns)
+    rows = txn_rows(txns)
 
     cache_alive = con.execute("SELECT COUNT(*) FROM transactions WHERE NOT deleted").fetchone()[0]
     live_ids = {r[0] for r in rows if not r[18]}  # r[18] = deleted flag
 
     aborted = bool(cache_alive) and len(live_ids) < prune_guard * cache_alive
-    n_upserted = _upsert(con, rows)
+    n_upserted = upsert(con, rows)
 
     n_pruned = -1
     if not aborted and live_ids:

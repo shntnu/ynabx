@@ -13,8 +13,8 @@ import marimo
 __generated_with = "0.23.11"
 app = marimo.App(width="medium")
 
-
 with app.setup:
+    import json
     import sys
     from pathlib import Path
 
@@ -165,13 +165,31 @@ def validate_adp(
         pl.sum_horizontal(pl.col("pay_date", "period_start", "period_end", "gross", "net").null_count())
     ).item()
     component_nulls = components.select(pl.sum_horizontal(pl.col("name", "amount").null_count())).item()
-    csv_counts_match = all(path.exists() and pl.read_csv(path).height == payroll[path.stem].height for path in csv_paths)
+    csv_counts_match = all(
+        path.exists() and pl.read_csv(path).height == payroll[path.stem].height for path in csv_paths
+    )
     return pl.DataFrame(
         [
-            {"check": "Every raw statement imported", "passed": checks.height == raw_count, "detail": f"{checks.height} of {raw_count}"},
-            {"check": "Statement identifiers unique", "passed": checks["statement_id"].n_unique() == checks.height, "detail": f"{checks['statement_id'].n_unique()} unique"},
-            {"check": "Required fields complete", "passed": core_nulls + component_nulls == 0, "detail": f"{core_nulls + component_nulls} missing"},
-            {"check": "Deposits equal net pay", "passed": deposit_mismatches == 0, "detail": f"{deposit_mismatches} mismatches"},
+            {
+                "check": "Every raw statement imported",
+                "passed": checks.height == raw_count,
+                "detail": f"{checks.height} of {raw_count}",
+            },
+            {
+                "check": "Statement identifiers unique",
+                "passed": checks["statement_id"].n_unique() == checks.height,
+                "detail": f"{checks['statement_id'].n_unique()} unique",
+            },
+            {
+                "check": "Required fields complete",
+                "passed": core_nulls + component_nulls == 0,
+                "detail": f"{core_nulls + component_nulls} missing",
+            },
+            {
+                "check": "Deposits equal net pay",
+                "passed": deposit_mismatches == 0,
+                "detail": f"{deposit_mismatches} mismatches",
+            },
             {"check": "CSV row counts match", "passed": csv_counts_match, "detail": f"{len(csv_paths)} files checked"},
         ]
     )
@@ -203,7 +221,9 @@ def income_history(payroll: dict[str, pl.DataFrame]) -> tuple[str, pl.DataFrame]
 @app.function(hide_code=True)
 def income_stability(history: pl.DataFrame) -> tuple[dict, pl.DataFrame]:
     """Measure cadence and variation across every ordinary check in the available history."""
-    intervals = history.with_columns(pl.col("pay_date").diff().dt.total_days().alias("interval_days"))["interval_days"].drop_nulls()
+    intervals = history.with_columns(pl.col("pay_date").diff().dt.total_days().alias("interval_days"))[
+        "interval_days"
+    ].drop_nulls()
     cadence_days = int(intervals.median())
     ordinary = history.filter(pl.col("ordinary_check"))
     year_index = (
@@ -211,7 +231,9 @@ def income_stability(history: pl.DataFrame) -> tuple[dict, pl.DataFrame]:
         .group_by("year")
         .agg(pl.col("base_earnings").median().alias("median_base_earnings"), pl.len().alias("checks"))
         .sort("year")
-        .with_columns((pl.col("median_base_earnings") / pl.col("median_base_earnings").first()).alias("relative_earnings"))
+        .with_columns(
+            (pl.col("median_base_earnings") / pl.col("median_base_earnings").first()).alias("relative_earnings")
+        )
         .select("year", "checks", pl.col("relative_earnings").round(3))
     )
     return {
@@ -230,7 +252,12 @@ def income_stability(history: pl.DataFrame) -> tuple[dict, pl.DataFrame]:
 def split_variation(payroll: dict[str, pl.DataFrame], history: pl.DataFrame) -> pl.DataFrame:
     """Rank deductions by variation as a percentage of recurring base earnings."""
     ordinary = history.filter(pl.col("ordinary_check")).select("statement_id", "base_earnings")
-    deductions = payroll["components"].filter(pl.col("kind") == "deduction").group_by("statement_id", "name").agg(pl.col("amount").sum())
+    deductions = (
+        payroll["components"]
+        .filter(pl.col("kind") == "deduction")
+        .group_by("statement_id", "name")
+        .agg(pl.col("amount").sum())
+    )
     names = deductions.join(ordinary, on="statement_id", how="inner").select("name").unique()
     complete = (
         ordinary.join(names, how="cross")
@@ -238,20 +265,26 @@ def split_variation(payroll: dict[str, pl.DataFrame], history: pl.DataFrame) -> 
         .with_columns(pl.col("amount").fill_null(0.0))
         .with_columns((100 * pl.col("amount") / pl.col("base_earnings")).alias("percent_of_base"))
     )
-    return complete.group_by("name").agg(
-        (pl.col("amount") != 0).sum().alias("checks_present"),
-        pl.col("percent_of_base").median().round(2).alias("median_percent"),
-        pl.col("percent_of_base").min().round(2).alias("min_percent"),
-        pl.col("percent_of_base").max().round(2).alias("max_percent"),
-        pl.col("percent_of_base").std().round(2).alias("variability"),
-    ).sort("variability", descending=True)
+    return (
+        complete.group_by("name")
+        .agg(
+            (pl.col("amount") != 0).sum().alias("checks_present"),
+            pl.col("percent_of_base").median().round(2).alias("median_percent"),
+            pl.col("percent_of_base").min().round(2).alias("min_percent"),
+            pl.col("percent_of_base").max().round(2).alias("max_percent"),
+            pl.col("percent_of_base").std().round(2).alias("variability"),
+        )
+        .sort("variability", descending=True)
+    )
 
 
 @app.function(hide_code=True)
 def match_ynab_deposits(payroll: dict[str, pl.DataFrame]) -> pl.DataFrame:
     """Match ADP deposits to local YNAB inflows by exact date and milliunit amount."""
-    rows = connect().execute(
-        """
+    rows = (
+        connect()
+        .execute(
+            """
         SELECT id, date, amount_milli, account_name, payee_name
         FROM transactions
         WHERE NOT deleted
@@ -259,22 +292,30 @@ def match_ynab_deposits(payroll: dict[str, pl.DataFrame]) -> pl.DataFrame:
           AND amount_milli > 0
           AND COALESCE(payee_name, '') NOT LIKE 'Transfer :%'
         """
-    ).fetchall()
-    ynab = pl.DataFrame(rows, schema=["ynab_id", "pay_date", "amount_milli", "ynab_account", "ynab_payee"], orient="row")
+        )
+        .fetchall()
+    )
+    ynab = pl.DataFrame(
+        rows, schema=["ynab_id", "pay_date", "amount_milli", "ynab_account", "ynab_payee"], orient="row"
+    )
     deposits = payroll["deposits"].with_columns(
         pl.col("pay_date").str.to_date(),
         (pl.col("amount") * 1000).round().cast(pl.Int64).alias("amount_milli"),
     )
     candidates = deposits.join(ynab, on=["pay_date", "amount_milli"], how="left")
     counts = candidates.group_by("statement_id", "deposit").agg(pl.col("ynab_id").count().alias("match_count"))
-    return candidates.join(counts, on=["statement_id", "deposit"]).with_columns(
-        pl.when(pl.col("match_count") == 1)
-        .then(pl.lit("matched"))
-        .when(pl.col("match_count") == 0)
-        .then(pl.lit("missing"))
-        .otherwise(pl.lit("ambiguous"))
-        .alias("match_status")
-    ).sort("pay_date", "deposit")
+    return (
+        candidates.join(counts, on=["statement_id", "deposit"])
+        .with_columns(
+            pl.when(pl.col("match_count") == 1)
+            .then(pl.lit("matched"))
+            .when(pl.col("match_count") == 0)
+            .then(pl.lit("missing"))
+            .otherwise(pl.lit("ambiguous"))
+            .alias("match_status")
+        )
+        .sort("pay_date", "deposit")
+    )
 
 
 @app.cell
