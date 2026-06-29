@@ -55,3 +55,8 @@ does     = "Validate and normalize private MyADP pay statements, measure recurri
 notebook = "nb09_reimbursements.py"
 helpers  = ["whole", "outstanding", "leaks"]
 does     = "Reimbursable ledger read off the category balance, not flags/memos. whole() = the truth (balance; ~0 = settled) plus a flag-drift check (orange rows should net to the balance); outstanding() = chase list of open (orange-flagged) rows grouped by reimburser (the memo prefix before ':'); leaks() = reimbursement money booked OUTSIDE the category (wires/refunds in income/RTA) to re-categorize. Read-only; reconcile() (not sync) after bulk memo edits."
+
+[[vignette]]
+notebook = "nb11_category_burn.py"
+helpers  = ["debt_payees", "category_burn", "debt_service", "classify", "drill", "category_groups", "monthly_burn"]
+does     = "Decompose monthly burn into categories PLUS debt service, then ground nb10's affordability breakeven in category detail. category_burn() = per-category amortized burn (annual lumps spread in) with variability + net-ratio signals; debt_service() = median monthly payment per loan, read from transfers to liability accounts (name-free via account type, like nb10) so the mortgage/loans the categories omit are counted and a one-time paydown doesn't inflate them. classify() splits categories into a committed floor vs flexible cushion by a transparent data rule (pass-through = low net-ratio; committed = regular + low-variability) with manual overrides for the value calls data can't make. drill() = one category's payees + monthly trend; category_groups() rolls burn up by your own YNAB group names; monthly_burn() = the seasonal shape (peak vs median month). Read-only on the cache + one accounts GET."
