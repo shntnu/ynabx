@@ -24,14 +24,10 @@ reinventing the SQL each time.
 
 ## What's in here
 
-| Notebook | What it does |
-|---|---|
-| `nb01_ynab_client.py` | Auth + thin HTTP wrappers (`get`, `patch`) + budget discovery. |
-| `nb02_ynab_sync.py` | Delta-sync transactions into a local DuckDB cache (idempotent). |
-| `nb03_review.py` | Pending-review table with payee-history category suggestions. |
-| `nb04_bulk_edit.py` | Build a patch plan and apply via the YNAB bulk endpoint. Dry-run by default. |
-| `nb05_export.py` | Parquet/CSV exports, monthly category summaries, top payees. |
-| `nb06_reconcile.py` | Diff a downloaded bank statement CSV against an account; amount-pooled matching surfaces what's missing, pending, or mismatched. Read-only. |
+The notebook map - each notebook, its importable helpers, and what it does -
+lives in [`catalog.toml`](catalog.toml) (the `[[vignette]]` table), the single
+source both agents and humans read. Browse it there rather than a second copy
+that drifts.
 
 ## Quickstart
 

@@ -1,4 +1,4 @@
-# Local DuckDB cache + exports (personal data) - NEVER commit anything under here
+# Local DuckDB cache + data tiers (personal data) - NEVER commit anything under here
 data/
 
 # marimo caches and exported session snapshots - would leak financial data

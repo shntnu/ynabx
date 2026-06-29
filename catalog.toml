@@ -44,7 +44,7 @@ does     = "Diff a bank-statement CSV against a YNAB account via amount-pooled m
 [[vignette]]
 notebook = "nb07_budget_assign.py"
 helpers  = ["anticipate", "assign"]
-does     = "Monthly budget-assignment planner. anticipate(month) proposes a per-category assignment (goaled -> goal_under_funded; else max of recency-weighted seasonal p75, a trailing-3mo regime guard, and the scheduled-bill floor, net of available; reimbursables deferred; lumpy categories flagged) and sweeps the remainder to the catch-all so Ready to Assign hits 0. assign(plan, month) tops up budgeted via PATCH months/{month}/categories; dry-run by default. Backtested by data/exports/backtest_anticipation.py."
+does     = "Monthly budget-assignment planner. anticipate(month) proposes a per-category assignment (goaled -> goal_under_funded; else max of recency-weighted seasonal p75, a trailing-3mo regime guard, and the scheduled-bill floor, net of available; reimbursables deferred; lumpy categories flagged) and sweeps the remainder to the catch-all so Ready to Assign hits 0. assign(plan, month) tops up budgeted via PATCH months/{month}/categories; dry-run by default. Backtested by data/processed/backtest_anticipation.py."
 
 [[vignette]]
 notebook = "nb08_adp_paystubs.py"

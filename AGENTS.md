@@ -28,7 +28,7 @@ Do not improvise alternative launch commands.
 Sibling catalogs (dmx, jx, fgx) commit molab session snapshots because their data is public. **ynabx must not.**
 
 - `notebooks/__marimo__/` is gitignored. Never force-add it.
-- `data/` (the DuckDB cache and exports) is gitignored wholesale. Never commit anything under it.
+- `data/` (the DuckDB cache and the `external/raw/interim/processed` tiers) is gitignored wholesale. Never commit anything under it.
 - Clear cell outputs before committing any notebook. `marimo check --fix` does not strip outputs, so eyeball the diff of any notebook you ran for embedded payees, amounts, or account names before `git add`.
 - Docs and tests use only synthetic placeholders (`op://Vault/Item/Field`, fake tokens). Keep it that way - no real payees, amounts, or budget ids in tracked files.
 

@@ -35,8 +35,11 @@ These are YNAB's four rules plus a hygiene goal, each pinned to a signal you can
 | 3 | Roll with the punches | count of overspent categories | same month payload: non-hidden categories where `balance < 0` | `0` |
 | 4 | Age your money | `age_of_money` (days) | same month payload: `age_of_money` | `>= 30` |
 | 5 | No categorization backlog | rows awaiting review | `len(nb03.pending())` | trending to `0` |
+| 6 | Close the reimbursement loop | reimbursable category balance | `nb09.whole(category)["balance"]` (with `outstanding()` for the chase list, `leaks()` for money booked as income) | `~0` |
 
-Goal 5 already has a catalog engine (`nb03`/`nb04`). Goals 1-4 read the current-month payload, which the cache does not store - one live `nb01.get(...)` call fetches it. If you measure rules 1-4 every session, that call is a candidate to graduate into a small `nb06_budget_health.py`.
+> Goal 1 nuance: with a one-month-lag discipline (assign last month's income, never the current month's), a nonzero `to_be_budgeted` mid-month is *by design*. The healthy read is "last month's income was fully assigned this month," not "current RTA is 0 right now." The personal interpretation lives in `goals.local.md` - do not read the target literally as zero-on-any-given-day.
+
+Goals 5 and 6 already have catalog engines (`nb03`/`nb04` and `nb09`). Goals 1-4 read the current-month payload, which the cache does not store - one live `nb01.get(...)` call fetches it. If you measure rules 1-4 every session, that call is a candidate to graduate into a small budget-health notebook (the `budget_health.py` throwaway is the prototype; `nb06` is already taken by reconcile, so use the next free slot).
 
 ## Retro convention
 

@@ -25,7 +25,7 @@ with app.setup:
 
     NOTEBOOK_DIR = Path(__file__).parent
     YNAB_DIR = NOTEBOOK_DIR.parent
-    EXPORT_DIR = YNAB_DIR / "data" / "exports"
+    EXPORT_DIR = YNAB_DIR / "data" / "processed"
     EXPORT_DIR.mkdir(parents=True, exist_ok=True)
 
     if str(NOTEBOOK_DIR) not in sys.path:
@@ -49,7 +49,7 @@ def _():
       the input to a category-by-month heatmap or pivot.
     - `payee_totals(days, top_n)` - top payees by spend in a window.
 
-    All exports land under `data/exports/` (gitignored) unless an absolute
+    All exports land under `data/processed/` (gitignored) unless an absolute
     path is given.
     """)
     return

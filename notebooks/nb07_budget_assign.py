@@ -29,7 +29,7 @@ with app.setup:
     from nb01_ynab_client import active_budget_id, get, patch
     from nb02_ynab_sync import connect
 
-    # --- model parameters (validated by data/exports/backtest_anticipation.py) ---
+    # --- model parameters (validated by data/processed/backtest_anticipation.py) ---
     PCT = 0.75  # recency-weighted seasonal percentile; p75 = knee of buffer-vs-hoard curve
     WINDOW_YEARS = 4  # short window: rising costs (e.g. electricity) catch fast, stale years fade
     LUMPY_COV = 0.70  # year-over-year CoV above this -> flag for a goal, don't trust the percentile
@@ -144,7 +144,7 @@ def _():
     catch-all (`SWEEP_CATEGORY`) so Ready to Assign hits `$0`. Doing that by hand is slow;
     this anticipates each category's need so it's a review-and-apply, not a re-derivation.
 
-    **The model** (per category, validated by `data/exports/backtest_anticipation.py`):
+    **The model** (per category, validated by `data/processed/backtest_anticipation.py`):
 
     - **goaled** category -> fund its `goal_under_funded` (the goal already encodes intent).
     - **reimbursable** (`REIMBURSABLE`) -> `0`; it's fronted-then-reimbursed, handled elsewhere.
