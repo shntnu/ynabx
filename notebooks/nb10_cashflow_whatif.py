@@ -124,13 +124,17 @@ def baseline(window_months: int = 12) -> dict:
     con.close()
 
     this_month = str(np.datetime64("today", "M"))
-    op = [r for r in op if str(r[0])[:7] != this_month][-window_months:]
-    flows = np.array([float(r[1]) for r in op])
+    all_flows = np.array([float(r[1]) for r in op if str(r[0])[:7] != this_month])
+    flows = all_flows[-window_months:]
+    median_by_window = {
+        months: float(np.median(all_flows[-months:])) for months in (6, 12, 24) if len(all_flows) >= months
+    }
     return {
         "window_months": len(flows),
         "flows": flows,
         "net_median": float(np.median(flows)),  # robust headline
         "net_mean": float(np.mean(flows)),  # contrast only; unreliable when a capital month is in-window
+        "median_by_window": median_by_window,
         "liquid_cash": round(float(liquid_cash), 2),
         "sources": sources,
     }
@@ -173,6 +177,9 @@ def _():
 def _():
     base = baseline(window_months=12)
     _src = base["sources"].with_columns(pl.col("total_in").cast(pl.Int64))
+    _sensitivity = ", ".join(
+        f"**{months}m:** \\${median:+,.0f}/mo" for months, median in base["median_by_window"].items()
+    )
     mo.vstack(
         [
             mo.md(
@@ -180,6 +187,8 @@ def _():
                 f"(income minus living costs and debt service, asset moves excluded) ran a median of "
                 f"**\\${base['net_median']:+,.0f}/mo** (mean \\${base['net_mean']:+,.0f}, skewed by "
                 f"capital months); liquid cash now **\\${base['liquid_cash']:,.0f}**.\n\n"
+                f"Window sensitivity - {_sensitivity}. The 12-month value is the primary estimate; "
+                f"6 months emphasizes the recent run rate and 24 months provides longer-term context.\n\n"
                 f"Real recurring income only - `months_seen` near {base['window_months']} is a steady "
                 f"paycheck; 1-2 is a one-off that isn't dependable income:"
             ),
