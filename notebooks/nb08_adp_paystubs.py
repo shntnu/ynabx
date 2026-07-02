@@ -1,10 +1,12 @@
 # /// script
 # requires-python = ">=3.11"
 # dependencies = [
+#     "anywidget",
 #     "duckdb",
 #     "marimo",
 #     "polars",
 #     "requests",
+#     "traitlets",
 # ]
 # ///
 
@@ -512,34 +514,267 @@ def _(ynab_matches):
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    ## Inspect one paycheck
+    ## Brush a date range
 
-    Select a pay date to see every earning and deduction as both dollars and a percentage of gross pay.
+    Each bar is one check (height = net pay; red = a check with exceptional earnings).
+    Drag across the timeline to recompute the stability metrics on just that range -
+    the regularity-over-a-selected-range question from "To extend", answered interactively.
+    Click a bar to see that check's anatomy; double-click the timeline to clear the brush.
     """)
     return
 
 
-@app.cell
-def _(history):
-    pay_date = mo.ui.dropdown(
-        options=history["pay_date"].cast(pl.String).reverse().to_list(),
-        value=str(history["pay_date"].max()),
-        label="Pay date",
-    )
-    pay_date
-    return (pay_date,)
+@app.cell(hide_code=True)
+def _():
+    import anywidget
+    import traitlets
+
+    class PaycheckTimeline(anywidget.AnyWidget):
+        """Brushable pay-statement timeline; the brush syncs back as statement ids."""
+
+        _esm = """
+        function render({ model, el }) {
+          const NS = "http://www.w3.org/2000/svg";
+          const W = 760, H = 170, PADX = 10, BASE = H - 22;
+          const fmt = (n) => "$" + Math.round(n).toLocaleString();
+          const esc = (s) => s.replace(/[&<>]/g, (c) => ({"&": "&amp;", "<": "&lt;", ">": "&gt;"}[c]));
+
+          const svg = document.createElementNS(NS, "svg");
+          svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+          svg.classList.add("pt-svg");
+          const status = document.createElement("div");
+          status.className = "pt-status";
+          const panel = document.createElement("div");
+          panel.className = "pt-panel";
+          el.append(svg, status, panel);
+
+          const checks = () => model.get("checks");
+          const times = () => checks().map((c) => new Date(c.date).getTime());
+
+          function xScale() {
+            const t = times();
+            const t0 = Math.min(...t), t1 = Math.max(...t);
+            const span = t1 - t0 || 1;
+            return {
+              toX: (ms) => PADX + (W - 2 * PADX) * (ms - t0) / span,
+              toT: (px) => t0 + span * Math.min(1, Math.max(0, (px - PADX) / (W - 2 * PADX))),
+            };
+          }
+
+          let brush = null, dragging = false, moved = false;
+
+          function draw() {
+            svg.replaceChildren();
+            const cs = checks();
+            if (!cs.length) return;
+            const { toX } = xScale();
+            const t = times();
+            const maxNet = Math.max(...cs.map((c) => c.net));
+            const selected = new Set(model.get("selected_ids"));
+            const bw = Math.max(3, Math.min(9, (W - 2 * PADX) / cs.length - 2));
+
+            const yearLo = new Date(Math.min(...t)).getUTCFullYear() + 1;
+            const yearHi = new Date(Math.max(...t)).getUTCFullYear();
+            for (let y = yearLo; y <= yearHi; y++) {
+              const gx = toX(Date.UTC(y, 0, 1));
+              const line = document.createElementNS(NS, "line");
+              line.setAttribute("x1", gx); line.setAttribute("x2", gx);
+              line.setAttribute("y1", 8); line.setAttribute("y2", BASE);
+              line.setAttribute("class", "pt-grid");
+              svg.appendChild(line);
+              const label = document.createElementNS(NS, "text");
+              label.setAttribute("x", gx + 3); label.setAttribute("y", H - 8);
+              label.setAttribute("class", "pt-tick");
+              label.textContent = y;
+              svg.appendChild(label);
+            }
+
+            if (brush) {
+              const b = document.createElementNS(NS, "rect");
+              b.setAttribute("x", Math.min(brush.x0, brush.x1));
+              b.setAttribute("y", 8);
+              b.setAttribute("width", Math.abs(brush.x1 - brush.x0));
+              b.setAttribute("height", BASE - 8);
+              b.setAttribute("class", "pt-brush");
+              svg.appendChild(b);
+            }
+
+            cs.forEach((c, i) => {
+              const h = Math.max(2, (BASE - 14) * c.net / maxNet);
+              const r = document.createElementNS(NS, "rect");
+              r.setAttribute("x", toX(t[i]) - bw / 2);
+              r.setAttribute("y", BASE - h);
+              r.setAttribute("width", bw);
+              r.setAttribute("height", h);
+              let cls = "pt-bar";
+              if (!c.ordinary) cls += " pt-exc";
+              if (selected.size && !selected.has(c.id)) cls += " pt-dim";
+              r.setAttribute("class", cls);
+              const tip = document.createElementNS(NS, "title");
+              tip.textContent = `${c.date} - net ${fmt(c.net)}${c.ordinary ? "" : " (exceptional)"}`;
+              r.appendChild(tip);
+              svg.appendChild(r);
+            });
+
+            const n = model.get("selected_ids").length;
+            status.textContent = n
+              ? `${n} checks brushed - stability below recomputes on them (double-click to clear)`
+              : "drag to brush a range - click a bar for its anatomy";
+          }
+
+          function anatomy(c) {
+            const comp = (model.get("components")[c.id] || []).slice().sort((a, b) =>
+              a.kind === b.kind
+                ? Math.abs(b.amount) - Math.abs(a.amount)
+                : a.kind === "earning" ? -1 : 1);
+            const maxAmt = Math.max(1, ...comp.map((x) => Math.abs(x.amount)));
+            const rows = comp.map((x) => `
+              <div class="pt-row">
+                <span class="pt-name" title="${esc(x.name)}">${esc(x.name)}</span>
+                <span class="pt-track"><span
+                  class="pt-fill ${x.kind === "earning" ? "pt-earn" : "pt-ded"}"
+                  style="width:${(100 * Math.abs(x.amount) / maxAmt).toFixed(1)}%"></span></span>
+                <span class="pt-amt">${fmt(x.amount)}</span>
+                <span class="pt-pct">${(100 * Math.abs(x.amount) / c.gross).toFixed(1)}%</span>
+              </div>`).join("");
+            panel.innerHTML = `
+              <div class="pt-head">${c.date} - gross ${fmt(c.gross)}, net ${fmt(c.net)}
+                (take-home ${(100 * c.net / c.gross).toFixed(1)}%)</div>${rows}`;
+          }
+
+          const pxOf = (e) => {
+            const rect = svg.getBoundingClientRect();
+            return (e.clientX - rect.left) * W / rect.width;
+          };
+          svg.addEventListener("pointerdown", (e) => {
+            dragging = true;
+            moved = false;
+            const x = pxOf(e);
+            brush = { x0: x, x1: x };
+            svg.setPointerCapture(e.pointerId);
+          });
+          svg.addEventListener("pointermove", (e) => {
+            if (!dragging) return;
+            brush.x1 = pxOf(e);
+            if (Math.abs(brush.x1 - brush.x0) > 3) moved = true;
+            draw();
+          });
+          svg.addEventListener("pointerup", (e) => {
+            dragging = false;
+            if (moved && brush) {
+              const { toT } = xScale();
+              const lo = toT(Math.min(brush.x0, brush.x1));
+              const hi = toT(Math.max(brush.x0, brush.x1));
+              const t = times();
+              const ids = checks().filter((_, i) => t[i] >= lo && t[i] <= hi).map((c) => c.id);
+              model.set("selected_ids", ids);
+              model.save_changes();
+            } else if (brush) {
+              // no drag: treat as a click and open the nearest bar's anatomy
+              // (a per-bar click listener never fires: pointer capture retargets the
+              // click, and this redraw would replace the bar before it dispatched)
+              const { toX } = xScale();
+              const t = times();
+              const x = pxOf(e);
+              let best = -1, bestDx = Infinity;
+              t.forEach((ms, i) => {
+                const dx = Math.abs(toX(ms) - x);
+                if (dx < bestDx) { bestDx = dx; best = i; }
+              });
+              if (best >= 0 && bestDx < 12) anatomy(checks()[best]);
+            }
+            brush = null;
+            draw();
+          });
+          svg.addEventListener("dblclick", () => {
+            model.set("selected_ids", []);
+            model.save_changes();
+            draw();
+          });
+
+          model.on("change:checks", draw);
+          model.on("change:selected_ids", draw);
+          draw();
+        }
+        export default { render };
+        """
+
+        _css = """
+        .pt-svg { width: 100%; display: block; cursor: crosshair; user-select: none; }
+        .pt-bar { fill: #4c78a8; }
+        .pt-bar:hover { fill: #2c5985; }
+        .pt-exc { fill: #e45756; }
+        .pt-dim { opacity: 0.25; }
+        .pt-grid { stroke: #88888844; stroke-width: 1; }
+        .pt-tick { font: 10px sans-serif; fill: #888; }
+        .pt-brush { fill: #4c78a833; stroke: #4c78a8; stroke-dasharray: 3 2; }
+        .pt-status { font: 12px sans-serif; color: #666; margin: 4px 0 8px; }
+        .pt-panel { font: 12px sans-serif; max-width: 560px; }
+        .pt-head { font-weight: 600; margin: 6px 0; }
+        .pt-row { display: flex; align-items: center; gap: 8px; margin: 2px 0; }
+        .pt-name { flex: 0 0 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .pt-track { flex: 1; height: 8px; background: #88888822; border-radius: 4px; overflow: hidden; }
+        .pt-fill { display: block; height: 100%; }
+        .pt-earn { background: #59a14f; }
+        .pt-ded { background: #e45756; }
+        .pt-amt { flex: 0 0 80px; text-align: right; font-variant-numeric: tabular-nums; }
+        .pt-pct { flex: 0 0 44px; text-align: right; font-variant-numeric: tabular-nums; color: #888; }
+        @media (prefers-color-scheme: dark) {
+          .pt-status { color: #aaa; }
+          .pt-tick { fill: #aaa; }
+        }
+        """
+
+        checks = traitlets.List([]).tag(sync=True)
+        components = traitlets.Dict({}).tag(sync=True)
+        selected_ids = traitlets.List([]).tag(sync=True)
+
+    return (PaycheckTimeline,)
 
 
 @app.cell
-def _(pay_date, payroll):
-    selected_gross = payroll["checks"].filter(pl.col("pay_date") == pay_date.value)["gross"].sum()
-    paycheck_split = (
-        payroll["components"]
-        .filter(pl.col("pay_date") == pay_date.value)
-        .with_columns((100 * pl.col("amount") / selected_gross).round(2).alias("percent_of_gross"))
-        .select("kind", "name", "amount", "percent_of_gross")
-    )
-    paycheck_split
+def _(PaycheckTimeline, history, payroll):
+    _checks = [
+        {
+            "id": row["statement_id"],
+            "date": str(row["pay_date"]),
+            "net": round(row["net"], 2),
+            "gross": round(row["gross"], 2),
+            "ordinary": row["ordinary_check"],
+        }
+        for row in history.sort("pay_date").iter_rows(named=True)
+    ]
+    _components = {}
+    for row in payroll["components"].iter_rows(named=True):
+        _components.setdefault(row["statement_id"], []).append(
+            {"kind": row["kind"], "name": row["name"], "amount": round(row["amount"], 2)}
+        )
+    timeline = mo.ui.anywidget(PaycheckTimeline(checks=_checks, components=_components))
+    timeline
+    return (timeline,)
+
+
+@app.cell
+def _(history, timeline):
+    _ids = timeline.value["selected_ids"]
+    _sub = history.filter(pl.col("statement_id").is_in(_ids)) if _ids else history
+    if _sub.height < 3:
+        _view = mo.md("Brush at least three checks to recompute stability.")
+    else:
+        _metrics, _ = income_stability(_sub)
+        _scope = f"{_sub.height} brushed checks" if _ids else f"all {_sub.height} checks"
+        _view = mo.vstack(
+            [
+                mo.md(f"**Stability over {_scope}** ({_sub['pay_date'].min()} to {_sub['pay_date'].max()})"),
+                pl.DataFrame(
+                    {
+                        "metric": [str(_k) for _k in _metrics],
+                        "value": [f"{_v:.4f}" if isinstance(_v, float) else str(_v) for _v in _metrics.values()],
+                    }
+                ),
+            ]
+        )
+    _view
     return
 
 
