@@ -6,7 +6,8 @@ surface = "duckdb"      # analysis runs on a local DuckDB cache; nb02 delta-sync
 cache = "YNAB_DB_PATH"  # cache location (default ./data/ynab.db)
 
 [auth]
-env_var = "YNAB_TOKEN"  # YNAB Personal Access Token; or set YNAB_OP_REF to read it from 1Password via `op`
+env_var = "YNAB_TOKEN"          # YNAB Personal Access Token
+indirect_env_var = "YNAB_OP_REF"  # 1Password reference (op://...) resolved via `op` at runtime
 
 [getting_started]
 first_notebook = "nb01_ynab_client.py"
