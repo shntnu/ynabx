@@ -70,17 +70,33 @@ def _():
       Pooling by amount sidesteps date-by-date matching entirely; date is
       only carried along for display.
 
-    The output is three things:
+    The output is three things, and each has an expert read that is NOT
+    "fix everything the diff shows":
 
-    - **Missing from YNAB** - bank charges with no YNAB counterpart. These
-      are what you add (YNAB File-Based Import dedupes, so re-importing the
-      statement is the safe way).
-    - **In YNAB, not on statement** - usually legitimately pending charges
-      that haven't posted yet; occasionally a duplicate or wrong-amount
-      entry to fix.
+    - **Missing from YNAB** - bank charges with no YNAB counterpart.
+      Never hand-enter these: re-import the statement CSV via YNAB
+      File-Based Import, which dedupes by `import_id`. And look at the
+      *dates* before acting - several missing rows clustered in one date
+      range is an import gap (the bank feed silently stopped), not a pile
+      of one-off misses. This is also why a "cancelled" subscription that
+      shows up here usually isn't cancelled.
+    - **In YNAB, not on statement** - read the `cleared` column. An
+      *uncleared* row is usually fine: the statement is a snapshot at the
+      close date, so anything posted since legitimately isn't on it - a
+      YNAB-vs-statement "mismatch" is often just a post-statement charge.
+      A *cleared* row with no bank match is the one to investigate: a
+      duplicate (the classic is a CC payment imported from both the card
+      and the checking side and never merged) or a wrong amount. Verify
+      against the bank's own site before deleting anything - the cache
+      only knows what YNAB imported, and absence in the cache is not
+      absence in reality.
     - **Cleared-vs-bank delta** - how far YNAB's cleared balance sits from
-      the statement balance. A small residual after the line items match
-      is pre-window drift; clear it with YNAB's Reconcile adjustment.
+      the statement balance. Once the line items above match, a small
+      residual is pre-window drift; clear it with YNAB's Reconcile
+      adjustment. That adjustment is fine *here*, on a statement account.
+      Never blind-adjust an on-budget checking gap the same way - there
+      the gap IS missing transactions, and an adjustment hides real
+      activity and silently distorts the budget.
 
     This notebook is **read-only**. It tells you what's off; you add /
     delete / clear in the YNAB app. Baking destructive writes into a
@@ -312,9 +328,12 @@ def _(account, bank_fmt, closing, csv_path, run, since, until):
             mo.md(
                 f"### {account.value}: {since.value} -> {until.value}\n\n"
                 f"- **{_missing.height}** charges on the statement missing from YNAB "
-                f"(`{_miss_total:+,.2f}`) - add these (re-import the CSV; YNAB dedupes).\n"
+                f"(`{_miss_total:+,.2f}`) - re-import the CSV (YNAB dedupes); if their dates "
+                f"cluster, suspect an import gap, not one-off misses.\n"
                 f"- **{_pending.height}** YNAB rows not on the statement "
-                f"(`{_pend_total:+,.2f}`) - pending charges, or duplicates/wrong amounts to fix.\n"
+                f"(`{_pend_total:+,.2f}`) - uncleared rows are usually post-statement charges; "
+                f"investigate any **cleared** row here (duplicate or wrong amount - verify "
+                f"against the bank before deleting).\n"
                 f"- YNAB working `{_res['ynab_working']:,.2f}` | "
                 f"cleared `{_res['ynab_cleared']:,.2f}`" + _tie
             ),
@@ -326,6 +345,21 @@ def _(account, bank_fmt, closing, csv_path, run, since, until):
             mo.ui.table(_pending, page_size=25, selection=None) if _pending.height else mo.md("_None._"),
         ]
     )
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    ## To extend
+
+    - **More bank formats.** `load_statement` knows one CSV shape per bank; add parsers as
+      new statements show up rather than hand-editing CSVs to fit.
+    - **Import-gap detection.** Date gaps among `import_id` rows flag a broken bank feed
+      before a reconcile surprises you (see the recurring-charge trap in AGENTS.md).
+    - **Cleared-delta history.** Persist each run's cleared-vs-bank delta so drift shows up
+      as a trend, not a one-off surprise at statement close.
+    """)
     return
 
 

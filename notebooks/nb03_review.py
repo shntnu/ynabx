@@ -319,5 +319,20 @@ def _():
     return
 
 
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    ## To extend
+
+    - **Suggestion accuracy.** Backtest `suggest_category` against already-approved rows:
+      how often does the 180-day payee mode match the category a human chose?
+    - **Token-suggester precision.** `suggest_by_tokens` is deliberately noisy; measure its
+      hit rate on NEW payees and tune `min_hits` before trusting it in an nb04 plan.
+    - **Age the backlog.** Add a days-pending column so the review table surfaces the rows
+      that have sat unapproved longest, not just the newest.
+    """)
+    return
+
+
 if __name__ == "__main__":
     app.run()

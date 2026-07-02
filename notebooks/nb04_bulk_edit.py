@@ -196,5 +196,20 @@ def _(plan_final):
     return
 
 
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    ## To extend
+
+    - **Approve alongside categorize.** The bulk PATCH can also flip `approved`; add an
+      opt-in flag so a confirmed plan clears the review backlog in the same call.
+    - **Plan provenance.** Stamp each plan row with the suggester that produced it
+      (exact-payee vs token fallback) so a bad apply can be traced to its source.
+    - **Undo plan.** Emit the inverse plan (old categories) next to each apply, so a
+      mistaken batch can be reverted with the same `apply_edits` machinery.
+    """)
+    return
+
+
 if __name__ == "__main__":
     app.run()

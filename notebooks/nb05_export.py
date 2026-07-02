@@ -229,5 +229,20 @@ def _():
     return
 
 
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    ## To extend
+
+    - **Category-by-month heatmap.** `monthly_category_summary` is already the pivot input;
+      render it here instead of leaving the visualization to the spreadsheet.
+    - **Year-over-year deltas.** The same summary for two years, joined on category, to show
+      where spend actually moved.
+    - **Scheduled export.** A `marimo run`-able variant that refreshes a parquet snapshot
+      for an external dashboard without opening the notebook.
+    """)
+    return
+
+
 if __name__ == "__main__":
     app.run()
