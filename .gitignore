@@ -7,6 +7,9 @@ notebooks/__marimo__/
 # direnv: holds personal 1P vault path. Use .envrc.example as a template.
 .envrc
 
+# Plaintext secrets (e.g. YNAB_TOKEN). nb01 loads this if present.
+.env
+
 # Personal goal-loop state (real numbers). The framework lives in tracked GOALS.md.
 goals.local.md
 

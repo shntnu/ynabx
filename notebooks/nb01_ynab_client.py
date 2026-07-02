@@ -15,9 +15,23 @@ with app.setup:
     import marimo as mo
     import os
     import subprocess
+    from pathlib import Path
+
     import requests
 
     YNAB_BASE = "https://api.ynab.com/v1"
+
+    # Load a repo-root .env (KEY=VALUE lines) into the environment if present, without
+    # clobbering anything already set - so a real env var or direnv still wins, and the
+    # 1Password fallback in get_token() is untouched.
+    # ponytail: naive line parser, no multiline/export/escape handling; fine for a PAT.
+    _envfile = Path(__file__).resolve().parent.parent / ".env"
+    if _envfile.exists():
+        for _line in _envfile.read_text().splitlines():
+            _line = _line.strip()
+            if _line and not _line.startswith("#") and "=" in _line:
+                _k, _v = _line.split("=", 1)
+                os.environ.setdefault(_k.strip(), _v.strip().strip("\"'"))
 
 
 @app.cell(hide_code=True)
