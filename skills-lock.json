@@ -5,19 +5,19 @@
       "source": "carpenter-singh-lab/vignette-catalog-skills",
       "sourceType": "github",
       "skillPath": "skills/vignette-catalog-compose-notebook/SKILL.md",
-      "computedHash": "c73261ee2013e6bca353faf9871ddad1e043af14487472c5903bdfaea695ba11"
+      "computedHash": "96ae2ac7773599d1958caffd04f18f0ab1f8edf95d9b83c3d5205e4d065514e4"
     },
     "vignette-catalog-scaffold": {
       "source": "carpenter-singh-lab/vignette-catalog-skills",
       "sourceType": "github",
       "skillPath": "skills/vignette-catalog-scaffold/SKILL.md",
-      "computedHash": "298e5f842128db2884c827b1242ae153698826935a4c69ac7e45c1549954b994"
+      "computedHash": "8672262eb7273f2f1e8cb7695dc4d3f5d62ec0c1cb954bb8bd9e107bfb7af68d"
     },
     "vignette-catalog-setup": {
       "source": "carpenter-singh-lab/vignette-catalog-skills",
       "sourceType": "github",
       "skillPath": "skills/vignette-catalog-setup/SKILL.md",
-      "computedHash": "77add01e9bec151803663185d22e69618a8704125107ef1bbe19f904383c7434"
+      "computedHash": "04f00028ef6e51ab2b14e81645cf078347ff87be8e0aab4c5f7e6235fc2b3294"
     }
   }
 }
