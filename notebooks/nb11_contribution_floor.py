@@ -209,7 +209,6 @@ def _():
 
     `observed monthly burn - dependable income that remains - planned cuts + safety margin`
 
-    It does **not** decide what is fair for another person to pay. That is a separate negotiation.
     Category refunds and reimbursements are netted against spending; recurring loan payments are
     added because YNAB records them as transfers rather than categories.
     """)
@@ -654,7 +653,7 @@ def _(board, fair_items):
     mo.md(
         f"### Fair-share estimate: **\\${fair_contribution:,.0f}/mo**\n\n"
         f"Selected shared costs: **\\${_shared_total:,.0f}/mo** at **{_pct}%**. "
-        "This is a negotiated cost share, not what the household needs to break even.\n\n"
+        "This is a cost share, separate from the break-even contribution below.\n\n"
         "## 3. State the plan\n\n"
         "Enter cuts you are actually prepared to make, not everything that could theoretically be cut. "
         "The safety margin is the monthly amount you want left after bills rather than targeting exactly $0."
@@ -714,9 +713,7 @@ def _(
                 f"- Dependable income retained: **\\${_retained:,.0f}/mo**\n"
                 f"- Planned cuts: **\\${_cuts:,.0f}/mo**\n"
                 f"- Safety margin: **\\${_margin:,.0f}/mo**\n"
-                f"- Fair-share estimate: **\\${fair_contribution:,.0f}/mo** - {_comparison}.\n\n"
-                "Break-even and fair share answer different questions; the comparison makes any "
-                "remaining household decision explicit."
+                f"- Fair-share estimate: **\\${fair_contribution:,.0f}/mo** - {_comparison}."
             ),
             mo.md("### Window sensitivity"),
             mo.ui.table(_sensitivity, page_size=3, selection=None),
@@ -730,8 +727,8 @@ def _():
     mo.md(r"""
     ## To extend
 
-    - Compare the resulting break-even contribution with a separately negotiated fair-share proposal.
-    - Add a specific incremental-cost estimate if the contributor changes household occupancy.
+    - Compare the resulting break-even contribution with a fair-share proposal.
+    - Add a specific incremental-cost estimate if household occupancy changes.
     """)
     return
 
