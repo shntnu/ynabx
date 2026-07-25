@@ -11,9 +11,11 @@ ynabx holds **real personal-finance data**. Treat every output as private - see 
 The catalog skills are installed via `npx skills add`, recorded in the tracked `skills-lock.json`, but **not vendored** -
 the install stores (`.agents/`, `.claude/skills/*`) are gitignored. A fresh clone has only the lock. Run once, from the repo root:
 
-    npx skills update
+    npx skills experimental_install
 
-This reconstitutes every skill the lock pins. Do this before relying on the skills or the validation rule.
+This reconstitutes every skill the lock pins for Claude Code and Codex.
+Use `npx skills update -p -y` to refresh skills that are already installed.
+Do this before relying on the skills or the validation rule.
 
 ## Launching notebooks
 
@@ -78,7 +80,9 @@ Semantic line breaks in markdown. ASCII-only. Conventional Commits. `ruff line-l
 
 ## Canonical contract (read before editing)
 
-The full contract lives in the installed `vignette-catalog-compose-notebook` skill's `references/` - notebook conventions, the data contract, indexing, the `catalog.toml` schema, and marimo gotchas. Read the relevant one before authoring or editing a notebook. Restore with `npx skills update` if the skill store is empty.
+The full contract lives in the installed `vignette-catalog-compose-notebook` skill's `references/` - notebook conventions, the data contract, indexing, the `catalog.toml` schema, and marimo gotchas.
+Read the relevant one before authoring or editing a notebook.
+Restore with `npx skills experimental_install` if the skill store is empty.
 
 ## When the question fits the catalog
 
