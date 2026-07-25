@@ -6,16 +6,18 @@ This catalog uses the shared vignette-catalog-skills (`vignette-catalog-setup`, 
 
 ynabx holds **real personal-finance data**. Treat every output as private - see "Privacy" below.
 
-## Skills (restore after clone)
+## Skills (install after clone)
 
-The catalog skills are installed via `npx skills add`, recorded in the tracked `skills-lock.json`, but **not vendored** -
-the install stores (`.agents/`, `.claude/skills/*`) are gitignored. A fresh clone has only the lock. Run once, from the repo root:
+Third-party skills are recorded in the tracked `skills-lock.json`, but **not vendored** - the install stores (`.agents/`, `.claude/skills/*`) are gitignored.
+Run these exact commands from the repo root after cloning:
 
-    npx skills experimental_install
+    npx skills@1.5.20 add vercel-labs/agent-browser -s agent-browser -a claude-code -a codex -y
+    npx skills@1.5.20 add marimo-team/skills -s anywidget-generator -a claude-code -a codex -y
+    npx skills@1.5.20 add marimo-team/marimo-pair -s marimo-pair -a claude-code -a codex -y
+    npx skills@1.5.20 add carpenter-singh-lab/vignette-catalog-skills -s vignette-catalog-compose-notebook -s vignette-catalog-scaffold -s vignette-catalog-setup -a claude-code -a codex -y
 
-This restores the canonical `.agents/skills/` store used by Codex.
-The lock does not record agent targets, so rerun the relevant add commands with repeated `-a claude-code -a codex` flags when Claude Code's `.claude/skills/` links also need to be created.
-Use `npx skills update -p -y` to refresh skills that are already installed.
+The lock records observed hashes but not agent targets or immutable revisions for these plain sources, so it is a drift record rather than a reproducible installer input.
+Replay the same commands to update, then inspect `git diff -- skills-lock.json` before committing an intentional upstream change.
 Do this before relying on the skills or the validation rule.
 
 ## Launching notebooks
@@ -83,7 +85,7 @@ Semantic line breaks in markdown. ASCII-only. Conventional Commits. `ruff line-l
 
 The full contract lives in the installed `vignette-catalog-compose-notebook` skill's `references/` - notebook conventions, the data contract, indexing, the `catalog.toml` schema, and marimo gotchas.
 Read the relevant one before authoring or editing a notebook.
-Restore with `npx skills experimental_install` if the skill store is empty.
+If the skill store is empty, run the exact install commands in the Skills section above.
 
 ## When the question fits the catalog
 
