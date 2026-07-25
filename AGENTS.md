@@ -13,7 +13,8 @@ the install stores (`.agents/`, `.claude/skills/*`) are gitignored. A fresh clon
 
     npx skills experimental_install
 
-This reconstitutes every skill the lock pins for Claude Code and Codex.
+This restores the canonical `.agents/skills/` store used by Codex.
+The lock does not record agent targets, so rerun the relevant add commands with repeated `-a claude-code -a codex` flags when Claude Code's `.claude/skills/` links also need to be created.
 Use `npx skills update -p -y` to refresh skills that are already installed.
 Do this before relying on the skills or the validation rule.
 
