@@ -1,6 +1,7 @@
 # /// script
 # requires-python = ">=3.11"
 # dependencies = [
+#     "altair",
 #     "anywidget==0.11.0",
 #     "duckdb",
 #     "marimo",
@@ -13,13 +14,14 @@
 
 import marimo
 
-__generated_with = "0.23.13"
+__generated_with = "0.23.16"
 app = marimo.App(width="medium")
 
 with app.setup:
     import sys
     from pathlib import Path
 
+    import altair as alt
     import marimo as mo
     import polars as pl
 
@@ -76,6 +78,16 @@ with app.setup:
         "Entertainment": "2 consumables",
     }
     SHARE_TIER_DEFAULT = "3 personal"
+    # Mirrors the board's light-mode --t1..--t4 CSS palette so the monthly
+    # chart and the board read as one color system (validated: CVD-safe,
+    # in-band lightness; low-contrast greens are relieved by the legend,
+    # tooltips, and the cost-detail table).
+    TIER_COLORS = {
+        "1 shelter": "#2a78d6",
+        "2 car": "#1baf7a",
+        "2 consumables": "#eda100",
+        "3 personal": "#008300",
+    }
     # An upstream cell re-run recreates the board widget (marimo mints a new
     # frontend model), wiping trait state; an observer mirrors the last
     # selection here so the new instance can be seeded with it.
@@ -195,6 +207,59 @@ def debt_service(window_months: int = 12) -> pl.DataFrame:
     ).pl()
     con.close()
     return df
+
+
+@app.function(hide_code=True)
+def monthly_costs(window_months: int = 12) -> pl.DataFrame:
+    """Per-month net cost for each burn item, keyed by the fair-items uid.
+
+    One row per (uid, month) with a net amount: category rows net refunds
+    against spend (so a refund-heavy month can go negative), debt rows are
+    the month's cash payments to that liability. Months with no activity
+    have no row.
+    """
+    ynab_meta()
+    con = connect()
+    payees = [row[0] for row in con.execute("SELECT payee FROM debt_acct").fetchall()]
+    liquid = [row[0] for row in con.execute("SELECT name FROM liquid_acct").fetchall()]
+    frames = [
+        con.execute(
+            """
+            SELECT 'category:' || category_name AS uid,
+                   category_name AS category,
+                   date_trunc('month', date) AS month,
+                   -SUM(amount_milli) / 1000.0 AS amount
+            FROM transactions
+            WHERE NOT deleted AND has_splits = FALSE AND category_name IS NOT NULL
+              AND category_name NOT IN ?
+              AND COALESCE(payee_name, '') NOT LIKE 'Transfer :%'
+              AND date >= date_trunc('month', current_date) - (? * INTERVAL 1 MONTH)
+              AND date < date_trunc('month', current_date)
+            GROUP BY 1, 2, 3
+            """,
+            [list(EXCLUDE_CATEGORIES), window_months],
+        ).pl()
+    ]
+    if payees and liquid:
+        frames.append(
+            con.execute(
+                """
+                SELECT 'debt:' || regexp_replace(payee_name, '^Transfer : ', '') AS uid,
+                       regexp_replace(payee_name, '^Transfer : ', '') AS category,
+                       date_trunc('month', date) AS month,
+                       SUM(-amount_milli) / 1000.0 AS amount
+                FROM transactions
+                WHERE NOT deleted AND has_splits = FALSE AND amount_milli < 0
+                  AND payee_name IN ? AND account_name IN ?
+                  AND date >= date_trunc('month', current_date) - (? * INTERVAL 1 MONTH)
+                  AND date < date_trunc('month', current_date)
+                GROUP BY 1, 2, 3
+                """,
+                [payees, liquid, window_months],
+            ).pl()
+        )
+    con.close()
+    return pl.concat(frames, how="vertical")
 
 
 @app.cell(hide_code=True)
@@ -351,7 +416,7 @@ def _(fair_items):
           // Tiers derive from the data ("1 "/"2 " prefixes self-sort), so a
           // tier added in Python renders without touching this file.
           const TIERS = [...new Set(model.get("items").map((item) => item.tier))].sort();
-          const PCTS = [0, 25, 33, 50, 67, 75, 100];
+          const PCTS = [0, 20, 30, 40, 50, 75, 100];
           const fmt = (v) => "$" + Math.round(v).toLocaleString("en-US");
           const esc = (s) =>
             String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
@@ -378,7 +443,18 @@ def _(fair_items):
           function draw() {
             const items = model.get("items");
             const selected = new Set(model.get("selected"));
-            const pct = model.get("share_pct");
+            // A share_pct that is not one of PCTS (a stale value mirrored
+            // from an earlier PCTS list) would leave every button inactive
+            // while the readout still used it. Snap to the nearest level and
+            // write back, so the board and the Python fair-share agree.
+            const rawPct = model.get("share_pct");
+            const pct = PCTS.includes(rawPct)
+              ? rawPct
+              : PCTS.reduce(
+                  (best, p) => (Math.abs(p - rawPct) < Math.abs(best - rawPct) ? p : best),
+                  PCTS[0],
+                );
+            if (pct !== rawPct) save("share_pct", pct);
             const total = items.reduce((sum, item) => sum + item.amount, 0) || 1;
             const maxAmount = Math.max(...items.map((item) => item.amount), 1);
             const sharedTotal = items
@@ -595,6 +671,45 @@ def _(fair_items):
     board.widget.observe(_remember, names=["selected", "share_pct"])
     board
     return (board,)
+
+
+@app.cell(hide_code=True)
+def _(board, fair_items):
+    _chosen_uids = board.value["selected"]
+    mo.stop(
+        not _chosen_uids,
+        mo.md("_Select costs on the board above to see their month-by-month history._"),
+    )
+    # Rows are one (uid, month) each, so Vega-Lite stacks segments per item;
+    # color carries the tier (matching the board), identity rides the tooltip.
+    _series = (
+        monthly_costs(12)
+        .join(fair_items.select("uid", "tier"), on="uid", how="inner")
+        .filter(pl.col("uid").is_in(_chosen_uids))
+    )
+    _chart = (
+        alt.Chart(_series)
+        .mark_bar()
+        .encode(
+            x=alt.X("yearmonth(month):O", title=None, axis=alt.Axis(format="%b %y", labelAngle=0)),
+            y=alt.Y("amount:Q", title="net $/mo", axis=alt.Axis(format="$,.0f")),
+            color=alt.Color(
+                "tier:N",
+                scale=alt.Scale(domain=list(TIER_COLORS), range=list(TIER_COLORS.values())),
+                legend=alt.Legend(title=None, orient="top"),
+            ),
+            order=alt.Order("tier:N", sort="ascending"),
+            tooltip=[
+                alt.Tooltip("category:N"),
+                alt.Tooltip("tier:N"),
+                alt.Tooltip("yearmonth(month):O", title="month", format="%b %Y"),
+                alt.Tooltip("amount:Q", format="$,.0f"),
+            ],
+        )
+        .properties(width=640, height=280, title="Selected costs, last 12 months")
+    )
+    _chart
+    return
 
 
 @app.cell(hide_code=True)
