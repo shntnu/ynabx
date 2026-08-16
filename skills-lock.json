@@ -13,29 +13,29 @@
       "skillPath": "skills/anywidget/SKILL.md",
       "computedHash": "93a512dc9870809902459881640b041afe5fe460774e9b49a212d8d799922ab5"
     },
+    "marimo-notebook": {
+      "source": "marimo-team/skills",
+      "sourceType": "github",
+      "skillPath": "skills/marimo-notebook/SKILL.md",
+      "computedHash": "d843af038a49245369d9a91b8dda531a0d58882bc06623604b673cb144588edd"
+    },
     "marimo-pair": {
       "source": "marimo-team/marimo-pair",
       "sourceType": "github",
       "skillPath": "skills/marimo-pair/SKILL.md",
-      "computedHash": "85a494e8076cbea237bfbd80592a542df869b693f0b61aa90c0a48d7f4afb5a7"
+      "computedHash": "0686fcc0854e7b3723087c0fc67831dc7122ffe696163c8e5e5a74e0222e1db2"
     },
     "vignette-catalog-compose-notebook": {
       "source": "carpenter-singh-lab/vignette-catalog-skills",
       "sourceType": "github",
       "skillPath": "skills/vignette-catalog-compose-notebook/SKILL.md",
-      "computedHash": "96ae2ac7773599d1958caffd04f18f0ab1f8edf95d9b83c3d5205e4d065514e4"
+      "computedHash": "12f3a3cba1141fece9ce739a99cd86d7366375d3ffa07a5a7230c88cfe8957e6"
     },
     "vignette-catalog-scaffold": {
       "source": "carpenter-singh-lab/vignette-catalog-skills",
       "sourceType": "github",
       "skillPath": "skills/vignette-catalog-scaffold/SKILL.md",
-      "computedHash": "8672262eb7273f2f1e8cb7695dc4d3f5d62ec0c1cb954bb8bd9e107bfb7af68d"
-    },
-    "vignette-catalog-setup": {
-      "source": "carpenter-singh-lab/vignette-catalog-skills",
-      "sourceType": "github",
-      "skillPath": "skills/vignette-catalog-setup/SKILL.md",
-      "computedHash": "04f00028ef6e51ab2b14e81645cf078347ff87be8e0aab4c5f7e6235fc2b3294"
+      "computedHash": "f7b20c944d5b6203a9735dc016ba3bef44a72f8c5ae5d1cd5a947127699b11d1"
     }
   }
 }

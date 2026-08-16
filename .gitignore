@@ -14,7 +14,7 @@ notebooks/__marimo__/
 goals.local.md
 
 # Installed skills: recorded in the tracked skills-lock.json, NOT vendored.
-# A fresh clone restores them with `npx skills update`.
+# A fresh clone restores them with the exact `npx skills@1.5.20 add` commands in AGENTS.md.
 .agents/
 .claude/skills/*
 
