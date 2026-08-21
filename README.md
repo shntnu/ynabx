@@ -67,7 +67,7 @@ The skills are recorded in `skills-lock.json` but not vendored, so restore them 
 npx skills@1.5.20 add vercel-labs/agent-browser -s agent-browser -a claude-code -a codex -y
 npx skills@1.5.20 add marimo-team/skills -s anywidget-generator -s marimo-notebook -a claude-code -a codex -y
 npx skills@1.5.20 add marimo-team/marimo-pair -s marimo-pair -a claude-code -a codex -y
-npx skills@1.5.20 add carpenter-singh-lab/vignette-catalog-skills -s vignette-catalog-compose-notebook -s vignette-catalog-scaffold -a claude-code -a codex -y
+npx skills@1.5.20 add 'carpenter-singh-lab/vignette-catalog-skills#v0.5.1' -s vignette-catalog-compose-notebook -s vignette-catalog-scaffold -a claude-code -a codex -y
 ```
 
 Then the `vignette-catalog-compose-notebook` skill walks Claude through reusing the catalog (it reads `catalog.toml` for the helper inventory and `AGENTS.md` for the domain invariants) instead of writing fresh DuckDB queries.
