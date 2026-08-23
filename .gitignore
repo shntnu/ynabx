@@ -34,3 +34,4 @@ uv.lock
 
 # OS
 .DS_Store
+.kata.local.toml
