@@ -1,7 +1,12 @@
 # AGENTS.md - ynabx
 
-Project-specific guidance for agents working in this catalog.
-`README.md` is the human entry point.
+This file provides guidance to coding agents when working with code in this repository.
+`CLAUDE.md` is a symlink to this file, so both agents read the same guidance.
+
+Read and follow @CONSTITUTION.md for baseline operating principles and @WRITING.md for prose style.
+Direct user instructions and the more specific guidance in this file override both.
+
+@README.md is the human entry point.
 This catalog uses the shared `vignette-catalog-compose-notebook` skill for setup, execution, and composition; its specifics live in `catalog.toml`.
 
 ynabx holds **real personal-finance data**.
