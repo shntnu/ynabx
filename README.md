@@ -17,14 +17,17 @@ Browse it there rather than a second copy that drifts.
 
 ## Quickstart
 
-You need [`uv`](https://docs.astral.sh/uv/) and a YNAB Personal Access Token (app.ynab.com -> Account Settings -> Developer Settings -> New Token).
+You need [`just`](https://just.systems/), [`uv`](https://docs.astral.sh/uv/), and a YNAB Personal Access Token (app.ynab.com -> Account Settings -> Developer Settings -> New Token).
 
 ```bash
 export YNAB_TOKEN=...                # your PAT
-uvx marimo edit --sandbox --no-token notebooks/nb01_ynab_client.py
+just nb 1                            # settle the cell graph, then open it
 ```
 
 That's it.
+Use `just nb 8`; the argument may also be written as `08` or `nb08` without supplying the full filename.
+The command starts or reuses the catalog's sandboxed marimo session, runs the cell graph, waits for every initially runnable cell to settle, prints its status, and then opens the ready URL in the default browser.
+Cells guarded by an interactive choice remain waiting until that choice is made.
 Run `nb02_ynab_sync.py` next to populate the local cache, then use `nb07`, `nb08`, `nb09`, or `nb11` for the question at hand.
 
 ## Configuration (env vars)
