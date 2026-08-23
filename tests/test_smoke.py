@@ -4,14 +4,14 @@
 # ///
 """Smoke tests that don't hit the YNAB API.
 
-Run with: `uv run --with pytest pytest tests/`
+Run with:
+`uv run --with duckdb --with marimo --with polars --with pytest --with requests pytest tests/`
 
 These exercise the boring plumbing - schema creation, env-var overrides,
 auth resolution - so a fresh clone can verify the catalog imports cleanly
 before pointing it at a real token.
 """
 
-import os
 import subprocess
 import sys
 from pathlib import Path

@@ -252,7 +252,7 @@ def _():
 
     - **Aging on the chase list.** Add days-open per reimburser to `outstanding()` so the
       stalest claims float to the top.
-    - **Leak auto-plan.** Feed confirmed `leaks()` rows into an nb04-style dry-run plan that
+    - **Leak auto-plan.** Feed confirmed `leaks()` rows into a dry-run plan that
       re-categorizes them into the reimbursable category (fee split off to income).
     - **Flag-drift alarm.** Track the `whole()` gap over time; a growing gap means memo/flag
       hygiene is slipping before the balance itself lies.

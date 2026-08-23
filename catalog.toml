@@ -23,26 +23,6 @@ helpers  = ["connect", "last_knowledge", "sync", "status", "reconcile"]
 does     = "Open the DuckDB cache, ensure schema, delta-sync transactions via YNAB's server_knowledge cursor (idempotent). reconcile() does a full since_date pull to prune stale matched-import duplicates the delta feed leaves behind (guard-aborts on a short pull)."
 
 [[vignette]]
-notebook = "nb03_review.py"
-helpers  = ["payee_top_categories", "suggest_category", "suggest_by_tokens", "pending"]
-does     = "Pending-review table (uncategorized/unapproved/uncleared, transfers excluded) with payee-history category suggestions. suggest_by_tokens is a name-token fallback for NEW payees the exact-payee suggester can't see (noisy; suggest-then-confirm). Read-only."
-
-[[vignette]]
-notebook = "nb04_bulk_edit.py"
-helpers  = ["propose_apply_suggestions", "apply_edits"]
-does     = "Build a patch plan and apply via the YNAB bulk PATCH endpoint. Dry-run by default; re-syncs the cache after a real apply."
-
-[[vignette]]
-notebook = "nb05_export.py"
-helpers  = ["export_transactions", "monthly_category_summary", "payee_totals"]
-does     = "Parquet/CSV exports, month x category spend summaries, top payees by absolute spend."
-
-[[vignette]]
-notebook = "nb06_reconcile.py"
-helpers  = ["load_statement", "reconcile"]
-does     = "Diff a bank-statement CSV against a YNAB account via amount-pooled matching: charges missing from YNAB, YNAB rows not on the statement, cleared-vs-bank delta. Read-only. Balance matching uses parent_id IS NULL, not the spend filter."
-
-[[vignette]]
 notebook = "nb07_budget_assign.py"
 helpers  = ["anticipate", "assign"]
 does     = "Monthly budget-assignment planner. anticipate(month) proposes a per-category assignment (goaled -> goal_under_funded; else max of recency-weighted seasonal p75, a trailing-3mo regime guard, and the scheduled-bill floor, net of available; reimbursables deferred; lumpy categories flagged) and sweeps the remainder to the catch-all so Ready to Assign hits 0. assign(plan, month) tops up budgeted via PATCH months/{month}/categories; dry-run by default. Backtested by data/processed/backtest_anticipation.py."

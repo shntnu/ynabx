@@ -5,10 +5,10 @@ An experiment in agent-driven personal-data exploration, built around [YNAB](htt
 ## The hypothesis
 
 Same shape as [jx](https://github.com/broadinstitute/jx) and [fgx](https://github.com/broadinstitute/fgx) - a catalog of marimo notebooks plus thin operational skills - applied to personal-finance data instead of scientific data.
-Like fgx, ynabx hits a REST API rather than local files; unlike fgx, it delta-syncs into a local DuckDB so analysis runs against the cache and only sync/writes touch the network.
+Like fgx, ynabx hits a REST API rather than local files; unlike fgx, it delta-syncs into a local DuckDB so most analysis runs against the cache.
 
 Each notebook exposes `@app.function` helpers; later notebooks import from earlier ones.
-It rides the shared [vignette-catalog-skills](https://github.com/carpenter-singh-lab/vignette-catalog-skills) engine: the `vignette-catalog-compose-notebook` skill reads `catalog.toml` and tells an agent what's in the catalog and how to compose new analyses from it - "what did I spend on camps last year", "categorize the recent uncategorized stuff", "export Q1 to parquet" - rather than reinventing the SQL each time.
+It rides the shared [vignette-catalog-skills](https://github.com/carpenter-singh-lab/vignette-catalog-skills) engine: the `vignette-catalog-compose-notebook` skill reads `catalog.toml` and tells an agent what's in the catalog and how to compose new analyses from it - "plan next month's assignments", "measure income stability", or "find open reimbursements" - rather than reinventing the SQL each time.
 
 ## What's in here
 
@@ -25,7 +25,7 @@ uvx marimo edit --sandbox --no-token notebooks/nb01_ynab_client.py
 ```
 
 That's it.
-Run `nb02_ynab_sync.py` next to populate the local cache, then explore `nb03`/`nb04`/`nb05`.
+Run `nb02_ynab_sync.py` next to populate the local cache, then use `nb07`, `nb08`, `nb09`, or `nb11` for the question at hand.
 
 ## Configuration (env vars)
 
@@ -41,8 +41,8 @@ Run `nb02_ynab_sync.py` next to populate the local cache, then explore `nb03`/`n
 - **`@app.function` helpers are importable.** Marimo promotes single-def cells to module-level functions.
   Sibling notebooks `from nb01_ynab_client import get` after adding `notebooks/` to `sys.path`.
   No package install required.
-- **DuckDB is the source of truth for analysis.** The API is hit only for sync (`nb02`) and writes (`nb04`).
-- **Writes are dry-run by default.** `nb04.apply_edits(plan, dry_run=False)` is the only thing that mutates YNAB.
+- **DuckDB is the source of truth for analysis.** `nb01` provides thin live HTTP wrappers, `nb02` syncs the cache, and `nb07` and `nb11` fetch budget data where needed.
+- **There is no transaction write path.** Make transaction changes in the YNAB UI; `nb07` can write budget assignments and defaults to a dry run.
 
 ### Always-on filters for spend aggregations
 
@@ -53,8 +53,8 @@ Three predicates appear in every "how much / how many" SQL query - skip them and
 - `COALESCE(payee_name, '') NOT LIKE 'Transfer :%'` - inter-account transfers don't carry categories on the budget side.
 
 This split filter is for **category-scoped spend** ("what did I spend on X"), where a `WHERE category_name = ?` clause excludes the split parent.
-For an **account balance or statement match** (`nb06`) use `parent_id IS NULL` instead - the spend filter also admits split children and double-counts, inflating the balance by roughly an order of magnitude.
-See the splits note in `CLAUDE.md`.
+For an **account balance or statement match** use `parent_id IS NULL` instead - the spend filter also admits split children and double-counts, inflating the balance by roughly an order of magnitude.
+See the splits note in `AGENTS.md`.
 
 Amounts are stored in **milliunits** (x1000); divide by 1000.0 for dollars.
 
