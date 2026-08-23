@@ -1,0 +1,6 @@
+# Gitignored files Claude Code copies into every worktree it creates.
+# Syntax is .gitignore syntax; only files that are actually gitignored are copied.
+.env
+goals.local.md
+.agents/
+.claude/skills/

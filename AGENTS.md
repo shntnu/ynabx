@@ -24,6 +24,9 @@ The lock records observed hashes but not agent targets or immutable revisions fo
 Replay the same commands to update, then inspect `git diff -- skills-lock.json` before committing an intentional upstream change.
 Do this before relying on the skills or the validation rule.
 
+Claude Code worktrees receive copies of the gitignored files listed in the tracked `.worktreeinclude` (`.env`, `goals.local.md`, and the skill stores) at creation time.
+Treat a worktree's `goals.local.md` copy as read-only; the main checkout's copy is canonical.
+
 ## Launching notebooks
 
 Always use `--sandbox` so PEP 723 inline metadata is provisioned:
