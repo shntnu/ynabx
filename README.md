@@ -38,6 +38,69 @@ Run `nb02_ynab_sync.py` next to populate the local cache, then use `nb07`, `nb08
 | `YNAB_OP_REF` | 1Password secret reference (e.g. `op://Vault/Item/Field`). Read via the `op` CLI when `YNAB_TOKEN` is unset. | unset |
 | `YNAB_DB_PATH` | Where to put the DuckDB cache. | `./data/ynab.db` |
 
+## Amazon transaction database
+
+Amazon transaction data uses a separate SQLite file because it comes from authenticated browser snapshots rather than the YNAB API.
+The saved JSON snapshots are the audit record, and `data/amazon.sqlite3` is a derived index that can be deleted and rebuilt.
+
+Place dated payment and order snapshots under `data/external/raw/amazon/` using these filename prefixes:
+
+- `amazon_payment_transactions_*.json`
+- `amazon_orders_*.json`
+
+Then rebuild the database:
+
+```bash
+just amazon-db
+```
+
+The importer searches subdirectories, so future refreshes may use one directory per scrape date.
+It hashes every source file, records source provenance, deduplicates overlapping payment snapshots, and atomically replaces the database only after validation succeeds.
+The importer collapses rows repeated across overlapping Amazon result pages, while it preserves identical charges that appear more than once on the same page.
+The `current_payment_transactions` view hides a pending row after a matching completed charge appears in a later snapshot.
+Money is stored as integer cents, and dates are stored as ISO `YYYY-MM-DD` text.
+
+Use `transaction_details` for the joined payment and item view, or `store_card_transaction_details` for Store Card rows only.
+For example:
+
+```bash
+sqlite3 -header -column data/amazon.sqlite3 \
+  "SELECT transaction_date, amount_cents / 100.0 AS amount, item_titles FROM store_card_transaction_details LIMIT 20;"
+```
+
+To refresh it, save the new raw snapshots alongside the old ones and run `just amazon-db` again.
+Older snapshots stay untouched, so a schema or importer change can always rebuild the same logical database from the original observations.
+
+### Authenticated Amazon refresh
+
+The authenticated browser exporter is `scripts/export_amazon.mjs`.
+It accepts either a Codex Chrome tab or a standard Playwright Page, and it never reads cookies or browser storage.
+It uses the signed-in page to collect Your Payments, regular orders, and digital orders.
+
+First, open Amazon Your Orders in Chrome and sign in.
+Then ask Codex to claim that tab and run `writeAmazonSnapshot()` from the exporter.
+The module writes an immutable timestamped directory under `data/external/raw/amazon/snapshots/`, including SHA256 hashes in `manifest.json`.
+After the exporter finishes, run `just amazon-db` to rebuild SQLite.
+
+For a Codex browser session where the claimed tab is named `amazonTab`, scrape in stages so each browser call stays below the tool deadline:
+
+```javascript
+const { pathToFileURL } = await import("node:url");
+const exporter = await import(pathToFileURL(`${nodeRepl.cwd}/scripts/export_amazon.mjs`).href);
+const payments = await exporter.scrapePayments(amazonTab);
+const recentOrders = await exporter.scrapeOrders(amazonTab, {
+  years: [2026, 2025, 2024, 2023],
+});
+const olderOrders = await exporter.scrapeOrders(amazonTab, {
+  years: [2022, 2021, 2020],
+});
+const orders = [...new Map([...recentOrders, ...olderOrders].map((order) => [order.order_id, order])).values()];
+await exporter.writeAmazonDataSnapshot({ payments, orders }, {
+  outputRoot: `${nodeRepl.cwd}/data/external/raw/amazon/snapshots`,
+  onProgress: (event) => nodeRepl.write(event),
+});
+```
+
 ## Design notes
 
 - **Each notebook is self-runnable.** PEP 723 inline dependency blocks mean `uv run` handles the venv per file.

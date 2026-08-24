@@ -6,6 +6,10 @@ session_helper := ".agents/skills/vignette-catalog-compose-notebook/scripts/cata
 default:
     @just --list
 
+# Rebuild the private Amazon SQLite database from saved JSON snapshots.
+amazon-db source="data/external/raw/amazon" db="data/amazon.sqlite3":
+    uv run scripts/import_amazon.py --source "{{ source }}" --db "{{ db }}"
+
 # Run a numbered notebook, wait for its cells, and open it in the browser.
 nb number:
     #!/usr/bin/env bash
