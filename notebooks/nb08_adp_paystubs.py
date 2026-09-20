@@ -62,7 +62,8 @@ def _():
     `scripts/import_adp.js`.
     Move the downloaded `adp-pay-statements-*.json` file into `data/raw/adp/`, then rerun this notebook.
 
-    The notebook selects the newest export, validates it, and rewrites the normalized CSVs under
+    The notebook unions every export (ADP serves about three years, so older exports keep older
+    statements; the newest export wins on duplicates), validates it, and rewrites the normalized CSVs under
     `data/interim/adp/`.
     Run `nb02_ynab_sync.py` first when the local YNAB cache needs refreshing.
     The exporter uses MyADP's undocumented web endpoint, so it may need updating if ADP changes the site.
@@ -71,28 +72,32 @@ def _():
 
 
 @app.function(hide_code=True)
-def latest_adp_export(raw_dir: str | Path = DATA_DIR / "raw" / "adp") -> Path:
-    """Return the newest immutable MyADP JSON export."""
+def adp_statements(raw_dir: str | Path = DATA_DIR / "raw" / "adp") -> list[dict]:
+    """Union every MyADP JSON export under raw_dir, one statement per pay date; the newest export wins."""
     exports = sorted(Path(raw_dir).glob("adp-pay-statements-*.json"))
     if not exports:
         raise FileNotFoundError(f"no ADP exports found under {raw_dir}")
-    return exports[-1]
+    # ponytail: keyed on payDate because older exports lack the _adp statement id; two checks on one day would collide.
+    by_date: dict[str, dict] = {}
+    for export in exports:
+        for statement in json.loads(export.read_text())["statements"]:
+            by_date[statement["payDate"]] = statement
+    return list(by_date.values())
 
 
 @app.function(hide_code=True)
 def load_adp(path: str | Path | None = None) -> dict[str, pl.DataFrame]:
-    """Load a MyADP JSON export into checks, components, and deposits tables."""
+    """Load the merged MyADP exports (or one file at `path`) into checks, components, and deposits tables."""
 
     def amount(value: dict | None) -> float | None:
         raw = (value or {}).get("amountValue")
         return None if raw is None else float(raw)
 
-    source = Path(path) if path else latest_adp_export()
-    payload = json.loads(source.read_text())
+    statements = json.loads(Path(path).read_text())["statements"] if path else adp_statements()
     checks: list[dict] = []
     components: list[dict] = []
     deposits: list[dict] = []
-    for statement_index, statement in enumerate(payload["statements"], start=1):
+    for statement_index, statement in enumerate(statements, start=1):
         pay_date = statement["payDate"]
         statement_id = (statement.get("_adp") or {}).get("statementID") or f"{pay_date}:{statement_index}"
         gross = amount(statement.get("grossPayAmount"))
@@ -169,8 +174,7 @@ def validate_adp(
     payroll: dict[str, pl.DataFrame], csv_paths: list[Path], source: str | Path | None = None
 ) -> pl.DataFrame:
     """Return explicit acceptance checks for a complete, internally consistent import."""
-    source_path = Path(source) if source else latest_adp_export()
-    raw_count = len(json.loads(source_path.read_text())["statements"])
+    raw_count = len(json.loads(Path(source).read_text())["statements"] if source else adp_statements())
     checks = payroll["checks"]
     components = payroll["components"]
     deposit_totals = payroll["deposits"].group_by("pay_date").agg(pl.col("amount").sum().alias("deposited"))

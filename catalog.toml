@@ -24,7 +24,7 @@ does     = "Open the DuckDB cache, ensure schema, delta-sync transactions via YN
 
 [[vignette]]
 notebook = "nb08_adp_paystubs.py"
-helpers  = ["latest_adp_export", "load_adp", "export_adp_csv", "validate_adp", "income_history", "income_stability", "split_variation", "match_ynab_deposits"]
+helpers  = ["adp_statements", "load_adp", "export_adp_csv", "validate_adp", "income_history", "income_stability", "split_variation", "match_ynab_deposits"]
 does     = "Validate and normalize private MyADP pay statements, measure recurring-income stability, rank paycheck-split drivers, and match deposits to local YNAB inflows."
 
 [[vignette]]
