@@ -72,10 +72,10 @@ Then clear outputs before commit (see Privacy).
   `_helper()`) into `_cell_<id>_helper` when it appears inside a cell or `@app.function` body.
   A `_name` defined in `app.setup` is therefore invisible to every cell - the reference raises `NameError` at runtime in a live kernel.
   It does NOT surface in plain `import` (which closes over module globals), nor in `validate-notebook.sh` (the export path resolves it and usually can't auth to run the data cells), nor when the broken branch is skipped on empty data.
-  It previously bit several catalog notebooks, including nb02, nb07, and nb09.
+  It previously bit several catalog notebooks, including nb02 and nb09.
   Name shared setup helpers and constants without a leading underscore; reserve `_name` for symbols used only inside the same `app.setup` block.
 - Data surface: a local **DuckDB cache** (`data/ynab.db`) is the source of truth for analysis; `nb02.sync()` delta-syncs it from the **YNAB REST API** (`api.ynab.com/v1`) via the `server_knowledge` cursor.
-  nb01 supplies thin live HTTP wrappers, while nb07 and nb11 use live budget data where the cache is insufficient.
+  nb01 supplies thin live HTTP wrappers, while nb11 uses live budget data where the cache is insufficient.
 - Do not add a Python package until repeated cross-notebook imports make it painful.
 
 ## Domain invariants (get these wrong and the numbers are wrong)
@@ -90,7 +90,6 @@ Then clear outputs before commit (see Privacy).
 - **There is no transaction write path in the catalog.** Make judgment edits in the YNAB UI.
   Before any recurring bulk write, restore the prior bulk-edit notebook from Git history or build a focused helper that shows a plan and defaults to a dry run.
   Never call `nb01.patch(...)` ad hoc because a transaction write can desync the cache.
-  nb07 budget assignments are separate and remain dry-run by default.
 - **Budgets.** `active_budget_id()` picks the most-recently-modified budget; pass an explicit id from `list_budgets()` for any other.
 - **Auth.** `get_token()` reads `YNAB_TOKEN`, else `op read $YNAB_OP_REF`.
   Token is cached at module level (1Password biometric prompts time out between calls).

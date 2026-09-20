@@ -28,7 +28,7 @@ That's it.
 Use `just nb 8`; the argument may also be written as `08` or `nb08` without supplying the full filename.
 The command starts or reuses the catalog's sandboxed marimo session, runs the cell graph, waits for every initially runnable cell to settle, prints its status, and then opens the ready URL in the default browser.
 Cells guarded by an interactive choice remain waiting until that choice is made.
-Run `nb02_ynab_sync.py` next to populate the local cache, then use `nb07`, `nb08`, `nb09`, or `nb11` for the question at hand.
+Run `nb02_ynab_sync.py` next to populate the local cache, then use `nb08`, `nb09`, or `nb11` for the question at hand.
 
 ## Configuration (env vars)
 
@@ -107,8 +107,8 @@ await exporter.writeAmazonDataSnapshot({ payments, orders }, {
 - **`@app.function` helpers are importable.** Marimo promotes single-def cells to module-level functions.
   Sibling notebooks `from nb01_ynab_client import get` after adding `notebooks/` to `sys.path`.
   No package install required.
-- **DuckDB is the source of truth for analysis.** `nb01` provides thin live HTTP wrappers, `nb02` syncs the cache, and `nb07` and `nb11` fetch budget data where needed.
-- **There is no transaction write path.** Make transaction changes in the YNAB UI; `nb07` can write budget assignments and defaults to a dry run.
+- **DuckDB is the source of truth for analysis.** `nb01` provides thin live HTTP wrappers, `nb02` syncs the cache, and `nb11` fetches budget data where needed.
+- **There is no transaction write path.** Make transaction changes in the YNAB UI.
 
 ### Always-on filters for spend aggregations
 
